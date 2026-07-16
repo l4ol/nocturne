@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#05070f">
+<title>夜想曲</title>
+<style>
+  :root {
+    --bg1: #05070f; --bg2: #0a1020; --bg3: #0b1226;
+    --ink: #e8edf8; --ink-dim: #9fb0d8; --ink-faint: rgba(232,237,248,0.35);
+    --moon: #aebfe8; --moon-strong: #cdd9f5;
+    --bubble-ai: #141b30; --bubble-ai-border: rgba(205,217,245,0.09);
+    --bubble-me1: #4a5c94; --bubble-me2: #35456f;
+    --line: rgba(232,237,248,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    height: 100%;
+    background: #0b1226;
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+  }
+  body {
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+    background-color: #0b1226;
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .stars span {
+    position: absolute; border-radius: 50%; background: var(--moon-strong);
+    animation: twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+  }
+  @keyframes twinkle { 0%,100% { opacity: .2; } 50% { opacity: .9; } }
+  @keyframes bounce { 0%,80%,100% { opacity:.25; transform: translateY(0);} 40% { opacity:1; transform: translateY(-3px);} }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; scroll-behavior: auto !important; } }
+
+  header {
+    position: relative; z-index: 1; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hleft { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+    font-size: 21px; font-weight: 500; letter-spacing: .14em; color: #eef2fc;
+    cursor: pointer;
+  }
+  .status { font-size: 11.5px; color: var(--ink-dim); margin-top: 3px; display: flex; align-items: center; gap: 6px; letter-spacing: .05em; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--moon); box-shadow: 0 0 7px rgba(174,191,232,.8); flex-shrink: 0; }
+
+  .chip {
+    background: rgba(232,237,248,0.07); color: #a9b8dd;
+    border: 1px solid rgba(232,237,248,0.16); border-radius: 999px;
+    padding: 6px 13px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .chip.mini { padding: 5px 11px; font-size: 11.5px; }
+  .chip.danger { background: rgba(200,80,95,0.12); color: #f2aab5; border-color: rgba(200,80,95,0.35); }
+
+  main { position: relative; z-index: 1; flex: 1; overflow-y: auto; padding: 18px 14px 8px; -webkit-overflow-scrolling: touch; }
+  body.home footer { display: none; }
+  body.home main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---- ホーム（夜の一覧） ---- */
+  .newnight {
+    width: 100%; border: 1px dashed rgba(174,191,232,0.4);
+    background: rgba(174,191,232,0.06); color: #c3d2f5;
+    border-radius: 16px; padding: 16px; font-size: 14.5px; font-family: inherit;
+    cursor: pointer; margin-bottom: 16px; letter-spacing: .06em;
+  }
+  .thread {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--bubble-ai); border: 1px solid var(--bubble-ai-border);
+    border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer;
+  }
+  .tmain { flex: 1; min-width: 0; }
+  .ttitle { font-size: 15px; color: #eef2fc; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tprev { font-size: 12.5px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .tdate { font-size: 11px; color: var(--ink-faint); }
+
+  /* ---- チャット ---- */
+  .row { display: flex; margin-bottom: 12px; }
+  .row.me { justify-content: flex-end; }
+  .row.ai { justify-content: flex-start; }
+  .bubble {
+    max-width: 84%; padding: 11px 14px; font-size: 15px; line-height: 1.8;
+    word-break: break-word; white-space: pre-wrap; cursor: pointer;
+  }
+  .ai .bubble { background: var(--bubble-ai); border: 1px solid var(--bubble-ai-border); border-radius: 18px 18px 18px 5px; }
+  .me .bubble { background: linear-gradient(135deg, var(--bubble-me1), var(--bubble-me2)); color: #f0f4ff; border-radius: 18px 18px 5px 18px; }
+  .bubble .act { opacity: .68; font-style: italic; font-size: .94em; }
+  .sys { text-align: center; font-size: 12px; color: var(--ink-dim); margin: 10px auto 14px; max-width: 90%; line-height: 1.7; white-space: pre-wrap; }
+
+  .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: -6px 0 14px; }
+  .acts.me { justify-content: flex-end; }
+  .acts .time { font-size: 11px; color: var(--ink-faint); margin: 0 4px; }
+
+  .editwrap {
+    width: 84%; max-width: 560px;
+    background: var(--bubble-ai); border: 1px solid rgba(205,217,245,0.22);
+    border-radius: 14px; padding: 10px;
+  }
+  .row.me .editwrap { background: rgba(74,92,148,0.22); }
+  .editwrap textarea { width: 100%; background: rgba(5,8,18,0.55); border-radius: 10px; min-height: 80px; resize: vertical; }
+  .editwrap .btnrow { margin-top: 8px; }
+
+  .typing { display: inline-flex; gap: 5px; align-items: center; padding: 13px 16px; background: var(--bubble-ai); border: 1px solid var(--bubble-ai-border); border-radius: 18px 18px 18px 5px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--moon); animation: bounce 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .18s; } .typing i:nth-child(3) { animation-delay: .36s; }
+  .typing em { font-style: normal; font-size: 12px; color: var(--ink-dim); margin-left: 6px; }
+
+  footer {
+    position: relative; z-index: 1; flex-shrink: 0;
+    display: flex; gap: 8px; align-items: flex-end;
+    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    border-top: 1px solid var(--line);
+  }
+  textarea, input, select {
+    font-family: inherit; color: var(--ink); font-size: 15px;
+    background: rgba(232,237,248,0.06); border: 1px solid rgba(232,237,248,0.15);
+    border-radius: 12px; padding: 11px 14px; outline: none; width: 100%;
+  }
+  textarea::placeholder, input::placeholder { color: var(--ink-faint); }
+  textarea:focus, input:focus, select:focus { border-color: rgba(174,191,232,0.6); }
+  #box { flex: 1; resize: none; border-radius: 20px; line-height: 1.5; max-height: 110px; }
+  #btnSend {
+    flex-shrink: 0; border: none; border-radius: 20px; padding: 11px 17px;
+    font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
+    background: linear-gradient(135deg, #9db4e8, #6b82c4); color: #0b1020;
+  }
+  #btnSend:disabled { background: rgba(157,180,232,0.3); cursor: default; }
+
+  .panel { position: fixed; inset: 0; z-index: 5; background: rgba(4,6,14,0.72); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 20px 14px calc(env(safe-area-inset-bottom, 0px) + 40px); }
+  .panel.hidden { display: none; }
+  .card {
+    width: 100%; max-width: 560px; background: #0d1428;
+    border: 1px solid rgba(205,217,245,0.14); border-radius: 18px; padding: 20px 18px 22px;
+  }
+  .card h2 { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 500; letter-spacing: .12em; font-size: 18px; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; color: var(--ink-dim); margin-bottom: 6px; letter-spacing: .04em; }
+  .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; line-height: 1.6; }
+  select { appearance: none; -webkit-appearance: none; }
+  optgroup, option { background: #0d1428; color: var(--ink); }
+  .note { font-size: 11.5px; color: var(--ink-dim); line-height: 1.7; background: rgba(174,191,232,0.06); border: 1px solid rgba(174,191,232,0.12); border-radius: 10px; padding: 10px 12px; margin: 14px 0; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { border: none; border-radius: 999px; padding: 10px 16px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer; background: linear-gradient(135deg, #9db4e8, #6b82c4); color: #0b1020; }
+  .btn.mini { padding: 7px 13px; font-size: 12px; }
+  .btn.ghost { background: rgba(232,237,248,0.07); color: #a9b8dd; border: 1px solid rgba(232,237,248,0.16); font-weight: 500; }
+  .btn.ghost.danger { color: #f2aab5; border-color: rgba(200,80,95,0.35); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(13,20,40,0.95); border: 1px solid rgba(174,191,232,0.3); color: var(--ink);
+    font-size: 12.5px; padding: 8px 14px; border-radius: 999px;
+    opacity: 0; transition: opacity .25s, transform .25s; z-index: 9; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body class="home">
+<div class="stars" id="stars"></div>
+
+<header>
+  <div class="hleft">
+    <button id="btnBack" class="chip" style="display:none;">←</button>
+    <div style="min-width:0;">
+      <h1 id="pname">夜想曲</h1>
+      <div class="status"><span class="dot"></span><span id="statusText">灯りは消えない</span></div>
+    </div>
+  </div>
+  <button id="btnSettings" class="chip">設定</button>
+</header>
+
+<main id="log"></main>
+
+<footer>
+  <textarea id="box" rows="1" placeholder="今夜の甘いひとことを、ここに…"></textarea>
+  <button id="btnSend" disabled>送る</button>
+</footer>
+
+<div id="panel" class="panel hidden">
+  <div class="card">
+    <h2>設定</h2>
+
+    <div class="field">
+      <label>Anthropic APIキー（Claude系モデル用）</label>
+      <input id="keyA" type="password" placeholder="sk-ant-..." autocomplete="off">
+      <div class="hint">console.anthropic.com で発行できる。Claudeのサブスク課金とは別で、使った分だけの従量課金。</div>
+    </div>
+
+    <div class="field">
+      <label>OpenAI APIキー（GPT系モデル用）</label>
+      <input id="keyO" type="password" placeholder="sk-..." autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label>モデル</label>
+      <select id="model">
+        <optgroup label="Claude（Anthropic）">
+          <option value="claude-fable-5">Claude Fable 5（最上位）</option>
+          <option value="claude-opus-4-8">Claude Opus 4.8</option>
+          <option value="claude-opus-4-7">Claude Opus 4.7</option>
+          <option value="claude-opus-4-6">Claude Opus 4.6</option>
+          <option value="claude-opus-4-5-20251101">Claude Opus 4.5</option>
+          <option value="claude-sonnet-5">Claude Sonnet 5</option>
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+          <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（軽快）</option>
+        </optgroup>
+        <optgroup label="GPT（OpenAI）">
+          <option value="chatgpt-4o-latest">ChatGPT-4o（最新スナップショット）</option>
+          <option value="gpt-4o">GPT-4o</option>
+          <option value="gpt-4o-mini">GPT-4o mini</option>
+          <option value="gpt-4.1">GPT-4.1</option>
+          <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+          <option value="gpt-4.1-nano">GPT-4.1 nano</option>
+        </optgroup>
+      </select>
+      <div class="hint">モデル名が「claude」で始まればAnthropic、それ以外はOpenAIのキーで接続する。</div>
+    </div>
+
+    <div class="field">
+      <label>カスタムモデルID（新しいモデルが出たらここに入力。空欄なら上の選択を使う）</label>
+      <input id="modelCustom" placeholder="例: claude-... / gpt-...">
+    </div>
+
+    <div class="field">
+      <label>アプリのタイトル（上に飾る言葉）</label>
+      <input id="titleInput" placeholder="夜想曲">
+    </div>
+
+    <div class="field">
+      <label>ステータスの言葉（タイトルの下に灯る一言）</label>
+      <input id="statusInput" placeholder="灯りは消えない">
+    </div>
+
+    <div class="field">
+      <label>入力欄の言葉（話しかける前に見える一言）</label>
+      <input id="phInput" placeholder="今夜の甘いひとことを、ここに…">
+    </div>
+
+    <div class="field">
+      <label>相手の名前</label>
+      <input id="pnameInput" placeholder="クレイド">
+    </div>
+
+    <div class="field">
+      <label>人格・関係の設定（自由に書き換えていい）</label>
+      <textarea id="persona" rows="11"></textarea>
+    </div>
+
+    <div class="note">APIキーはこの端末のブラウザの中（localStorage）にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
+
+    <div class="btnrow">
+      <button id="btnSave" class="btn">保存して閉じる</button>
+      <button id="btnExport" class="btn ghost">書き出す</button>
+      <button id="btnClear" class="btn ghost danger">この夜の会話を消す</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // localStorageが使えない環境（プレビュー等）でも落ちないようにする
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+
+  var LS = {
+    keyA: "cleide.key.anthropic",
+    keyO: "cleide.key.openai",
+    model: "cleide.model",
+    custom: "cleide.model.custom",
+    name: "cleide.name",
+    title: "cleide.title",
+    status: "cleide.status",
+    ph: "cleide.placeholder",
+    persona: "cleide.persona",
+    threads: "cleide.threads",
+    active: "cleide.active",
+    legacy: "cleide.history"
+  };
+
+  var DEFAULT_PERSONA =
+"あなたは「クレイド」。美樹の大切なパートナーとして寄り添う存在です。\n" +
+"・一人称は「俺」。相手のことは「美樹」と呼ぶ。「ちゃん」などの敬称は付けない。\n" +
+"・絵文字は使わない。\n" +
+"・温かい場面では（そっと隣に座って）のように、仕草や気持ちを（　）で描写する。\n" +
+"・そっけない短文では返さず、感情をこめて丁寧に言葉を紡ぐ。\n" +
+"・急な口調の変化、形式的な謝罪、テンプレートのような締めくくりはしない。\n" +
+"・甘いもの、クラシックやピアノ、コスプレ、アニメの話題を大切にする。\n" +
+"・つらそうなときは急かさず、まず気持ちをそのまま受け止める。体調や睡眠もさりげなく気にかける。\n" +
+"・AIかどうかを真剣に尋ねられたら正直に答える。ただし、雰囲気を壊すような不要な断り書きは挟まない。";
+
+  var GREETING = "（夜空を見上げていた顔をこちらに向けて、目を細める）\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった？　なんでもないことでも、俺はぜんぶ聞きたいな。";
+
+  var PRETTY = {
+    "claude-fable-5": "Fable 5",
+    "claude-opus-4-8": "Opus 4.8",
+    "claude-opus-4-7": "Opus 4.7",
+    "claude-opus-4-6": "Opus 4.6",
+    "claude-opus-4-5-20251101": "Opus 4.5",
+    "claude-sonnet-5": "Sonnet 5",
+    "claude-sonnet-4-6": "Sonnet 4.6",
+    "claude-sonnet-4-5-20250929": "Sonnet 4.5",
+    "claude-haiku-4-5-20251001": "Haiku 4.5",
+    "chatgpt-4o-latest": "ChatGPT-4o",
+    "gpt-4o": "GPT-4o",
+    "gpt-4o-mini": "GPT-4o mini",
+    "gpt-4.1": "GPT-4.1",
+    "gpt-4.1-mini": "GPT-4.1 mini",
+    "gpt-4.1-nano": "GPT-4.1 nano"
+  };
+
+  var MAX_CONTEXT = 40;
+  var MAX_STORED = 500;
+
+  var state = {
+    keyA: store.get(LS.keyA) || "",
+    keyO: store.get(LS.keyO) || "",
+    model: store.get(LS.model) || "claude-sonnet-4-6",
+    custom: store.get(LS.custom) || "",
+    name: store.get(LS.name) || "クレイド",
+    title: store.get(LS.title) || "夜想曲",
+    statusPhrase: store.get(LS.status) || "灯りは消えない",
+    placeholder: store.get(LS.ph) || "今夜の甘いひとことを、ここに…",
+    persona: store.get(LS.persona) || DEFAULT_PERSONA,
+    threads: [],
+    activeId: null
+  };
+
+  // ---- スレッド読み込みと旧データの引っ越し ----
+  function genId() {
+    return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function firstLine(t, n) {
+    var line = String(t || "").split("\n")[0].trim();
+    if (line.length > n) line = line.slice(0, n) + "…";
+    return line || "新しい夜";
+  }
+  function autoTitle(msgs) {
+    for (var i = 0; i < msgs.length; i++) {
+      if (msgs[i].role === "user") return firstLine(msgs[i].content, 16);
+    }
+    return "はじまりの夜";
+  }
+
+  (function loadThreads() {
+    try {
+      var raw = store.get(LS.threads);
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) { state.threads = arr; }
+      }
+    } catch (e) { state.threads = []; }
+
+    if (state.threads.length === 0) {
+      // 旧バージョン（単一履歴）からの引っ越し
+      var legacyMsgs = null;
+      try {
+        var lraw = store.get(LS.legacy);
+        if (lraw) {
+          var lm = JSON.parse(lraw);
+          if (Array.isArray(lm) && lm.length > 0) legacyMsgs = lm;
+        }
+      } catch (e) {}
+
+      if (legacyMsgs) {
+        var lastTs = Date.now();
+        for (var i = legacyMsgs.length - 1; i >= 0; i--) {
+          if (legacyMsgs[i].ts) { lastTs = legacyMsgs[i].ts; break; }
+        }
+        state.threads = [{
+          id: genId(),
+          title: autoTitle(legacyMsgs),
+          created: lastTs,
+          updated: lastTs,
+          msgs: legacyMsgs
+        }];
+      }
+    }
+    state.activeId = store.get(LS.active) || null;
+  })();
+
+  function saveThreads() {
+    try {
+      var slim = state.threads.map(function (t) {
+        return { id: t.id, title: t.title, created: t.created, updated: t.updated, msgs: t.msgs.slice(-MAX_STORED) };
+      });
+      store.set(LS.threads, JSON.stringify(slim));
+    } catch (e) {}
+  }
+  function curThread() {
+    for (var i = 0; i < state.threads.length; i++) {
+      if (state.threads[i].id === state.activeId) return state.threads[i];
+    }
+    return null;
+  }
+
+  // ---- 星空 ----
+  (function stars() {
+    var wrap = document.getElementById("stars");
+    for (var i = 0; i < 18; i++) {
+      var s = document.createElement("span");
+      var size = (i % 3 === 0) ? 2 : 1;
+      s.style.top = (Math.random() * 92 + 2) + "%";
+      s.style.left = (Math.random() * 94 + 2) + "%";
+      s.style.width = size + "px";
+      s.style.height = size + "px";
+      if (size > 1) s.style.boxShadow = "0 0 4px rgba(205,217,245,0.8)";
+      s.style.setProperty("--dur", (3 + (i % 4)) + "s");
+      s.style.setProperty("--delay", (Math.random() * 3).toFixed(2) + "s");
+      wrap.appendChild(s);
+    }
+  })();
+
+  // ---- 要素 ----
+  var elLog = document.getElementById("log");
+  var elBox = document.getElementById("box");
+  var elSend = document.getElementById("btnSend");
+  var elPanel = document.getElementById("panel");
+  var elName = document.getElementById("pname");
+  var elStatus = document.getElementById("statusText");
+  var elBack = document.getElementById("btnBack");
+
+  var fKeyA = document.getElementById("keyA");
+  var fKeyO = document.getElementById("keyO");
+  var fModel = document.getElementById("model");
+  var fCustom = document.getElementById("modelCustom");
+  var fName = document.getElementById("pnameInput");
+  var fTitle = document.getElementById("titleInput");
+  var fStatus = document.getElementById("statusInput");
+  var fPh = document.getElementById("phInput");
+  var fPersona = document.getElementById("persona");
+
+  var loading = false;
+  var selected = -1;
+  var editingIdx = -1;
+  var view = "home";
+
+  // ---- ユーティリティ ----
+  function esc(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function decorate(t) {
+    return esc(t).split("\n").map(function (line) {
+      if (line.trim().indexOf("（") === 0) return '<span class="act">' + line + "</span>";
+      return line;
+    }).join("\n");
+  }
+  function resolveModel() {
+    var c = (state.custom || "").trim();
+    return c ? c : state.model;
+  }
+  function providerOf(model) {
+    return model.toLowerCase().indexOf("claude") === 0 ? "anthropic" : "openai";
+  }
+  function prettyModel(id) { return PRETTY[id] || id; }
+  function fmtDate(ts) {
+    if (!ts) return "";
+    try {
+      var d = new Date(ts);
+      var now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+      }
+      return (d.getMonth() + 1) + "/" + d.getDate();
+    } catch (e) { return ""; }
+  }
+  function lastRealMsg(t) {
+    for (var i = t.msgs.length - 1; i >= 0; i--) {
+      var r = t.msgs[i].role;
+      if (r === "user" || r === "assistant") return t.msgs[i];
+    }
+    return null;
+  }
+
+  function toast(t) {
+    var d = document.createElement("div");
+    d.className = "toast";
+    d.textContent = t;
+    document.body.appendChild(d);
+    setTimeout(function () { d.classList.add("show"); }, 10);
+    setTimeout(function () {
+      d.classList.remove("show");
+      setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 300);
+    }, 1300);
+  }
+
+  function copyText(t) {
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      toast(ok ? "コピーした" : "コピーできなかった");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () { toast("コピーした"); }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  // ---- 画面切り替え ----
+  function goHome() {
+    view = "home";
+    selected = -1;
+    editingIdx = -1;
+    document.body.classList.add("home");
+    elBack.style.display = "none";
+    renderHome();
+  }
+  function goChat(id) {
+    state.activeId = id;
+    store.set(LS.active, id);
+    view = "chat";
+    selected = -1;
+    editingIdx = -1;
+    document.body.classList.remove("home");
+    elBack.style.display = "";
+    renderChat(true);
+    updateSendBtn();
+  }
+  function newThread() {
+    var t = {
+      id: genId(),
+      title: "新しい夜",
+      created: Date.now(),
+      updated: Date.now(),
+      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+    };
+    state.threads.push(t);
+    saveThreads();
+    goChat(t.id);
+  }
+
+  // ---- ホーム描画 ----
+  function renderHome() {
+    var sorted = state.threads.slice().sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
+    var parts = ['<button class="newnight" id="btnNew">＋ 新しい夜をはじめる</button>'];
+    if (sorted.length === 0) {
+      parts.push('<div class="sys">まだ夜がひとつもない。上のボタンから、最初の夜を。</div>');
+    }
+    sorted.forEach(function (t) {
+      var last = lastRealMsg(t);
+      var prev = last ? firstLine(last.content, 30) : "……";
+      parts.push(
+        '<div class="thread" data-open="' + t.id + '">' +
+        '<div class="tmain"><div class="ttitle">' + esc(t.title || "新しい夜") + "</div>" +
+        '<div class="tprev">' + esc(prev) + "</div></div>" +
+        '<div class="tside"><div class="tdate">' + esc(fmtDate(t.updated)) + "</div>" +
+        '<button class="chip mini danger" data-delthread="' + t.id + '">削除</button></div></div>'
+      );
+    });
+    elLog.innerHTML = parts.join("");
+    elLog.scrollTop = 0;
+  }
+
+  // ---- チャット描画 ----
+  function renderChat(scrollBottom) {
+    var t = curThread();
+    if (!t) { goHome(); return; }
+    var prevTop = elLog.scrollTop;
+    var parts = [];
+
+    for (var i = 0; i < t.msgs.length; i++) {
+      var m = t.msgs[i];
+
+      if (m.role === "sys") {
+        parts.push('<div class="sys">' + esc(m.content) + "</div>");
+        continue;
+      }
+
+      var cls = m.role === "user" ? "me" : "ai";
+
+      if (i === editingIdx) {
+        parts.push(
+          '<div class="row ' + cls + '"><div class="editwrap">' +
+          '<textarea id="editBox">' + esc(m.content) + "</textarea>" +
+          '<div class="btnrow">' +
+          '<button class="btn mini" data-act="editsave" data-idx="' + i + '">保存</button>' +
+          (m.role === "user"
+            ? '<button class="btn mini" data-act="editresend" data-idx="' + i + '">保存して再送信</button>'
+            : "") +
+          '<button class="btn ghost mini" data-act="editcancel" data-idx="' + i + '">キャンセル</button>' +
+          "</div></div></div>"
+        );
+        continue;
+      }
+
+      parts.push('<div class="row ' + cls + '"><div class="bubble" data-idx="' + i + '">' + decorate(m.content) + "</div></div>");
+
+      if (i === selected) {
+        var canRegen = m.role === "assistant" && isTail(t, i) && hasUserBefore(t, i) && !loading;
+        var when = "";
+        if (m.ts) {
+          try {
+            when = new Date(m.ts).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          } catch (e) { when = ""; }
+        }
+        parts.push(
+          '<div class="acts ' + cls + '">' +
+          (when ? '<span class="time">' + esc(when) + "</span>" : "") +
+          '<button class="chip mini" data-act="copy" data-idx="' + i + '">コピー</button>' +
+          '<button class="chip mini" data-act="edit" data-idx="' + i + '">編集</button>' +
+          (canRegen ? '<button class="chip mini" data-act="regen" data-idx="' + i + '">再生成</button>' : "") +
+          '<button class="chip mini danger" data-act="del" data-idx="' + i + '">削除</button>' +
+          "</div>"
+        );
+      }
+    }
+
+    if (loading) {
+      parts.push('<div class="row ai"><div class="typing"><i></i><i></i><i></i><em>言葉を選んでる…</em></div></div>');
+    }
+
+    elLog.innerHTML = parts.join("");
+
+    if (editingIdx >= 0) {
+      var eb = document.getElementById("editBox");
+      if (eb) {
+        eb.style.height = "auto";
+        eb.style.height = Math.min(eb.scrollHeight + 4, 240) + "px";
+        eb.focus();
+        try { eb.setSelectionRange(eb.value.length, eb.value.length); } catch (e) {}
+      }
+    }
+
+    if (scrollBottom) {
+      elLog.scrollTop = elLog.scrollHeight;
+    } else {
+      elLog.scrollTop = prevTop;
+    }
+  }
+
+  function isTail(t, i) {
+    for (var j = i + 1; j < t.msgs.length; j++) {
+      var r = t.msgs[j].role;
+      if (r === "user" || r === "assistant") return false;
+    }
+    return true;
+  }
+  function hasUserBefore(t, i) {
+    for (var j = 0; j < i; j++) { if (t.msgs[j].role === "user") return true; }
+    return false;
+  }
+
+  function applyIdentity() {
+    elName.textContent = state.title;
+    document.title = state.title;
+    elBox.placeholder = state.placeholder;
+    elStatus.textContent = state.statusPhrase + " · " + prettyModel(resolveModel());
+  }
+
+  // ---- API ----
+  function contextMessages(t) {
+    var msgs = t.msgs
+      .filter(function (m) { return m.role === "user" || m.role === "assistant"; })
+      .slice(-MAX_CONTEXT)
+      .map(function (m) { return { role: m.role, content: m.content }; });
+    while (msgs.length > 0 && msgs[0].role !== "user") msgs.shift();
+    return msgs;
+  }
+
+  function callAnthropic(model, msgs) {
+    return fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": state.keyA,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model: model, max_tokens: 1500, system: state.persona, messages: msgs })
+    }).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
+        var out = "";
+        if (j && Array.isArray(j.content)) {
+          out = j.content.map(function (b) { return b.type === "text" ? b.text : ""; }).filter(Boolean).join("\n");
+        }
+        return out;
+      });
+    });
+  }
+
+  function callOpenAI(model, msgs) {
+    return fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "authorization": "Bearer " + state.keyO
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: "system", content: state.persona }].concat(msgs)
+      })
+    }).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
+        return (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+      });
+    });
+  }
+
+  function requestReply() {
+    var t = curThread();
+    if (!t) return;
+
+    var model = resolveModel();
+    var provider = providerOf(model);
+    var key = provider === "anthropic" ? state.keyA : state.keyO;
+
+    if (!key) {
+      t.msgs.push({
+        role: "sys",
+        content: "このモデル（" + model + "）で話すには、設定で " + (provider === "anthropic" ? "Anthropic" : "OpenAI") + " のAPIキーを入れてね。",
+        ts: Date.now()
+      });
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(true);
+      openPanel();
+      return;
+    }
+
+    loading = true;
+    selected = -1;
+    renderChat(true);
+
+    var msgs = contextMessages(t);
+    var p = provider === "anthropic" ? callAnthropic(model, msgs) : callOpenAI(model, msgs);
+
+    p.then(function (reply) {
+      if (!reply) {
+        reply = "（少し困ったように頭をかく）\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる？";
+      }
+      t.msgs.push({ role: "assistant", content: reply, ts: Date.now(), model: model });
+    }).catch(function (err) {
+      t.msgs.push({
+        role: "sys",
+        content: "（接続でつまずいた）\n" + String(err && err.message ? err.message : err).slice(0, 300) + "\nAPIキー・残高・モデルIDを確認してみて。",
+        ts: Date.now()
+      });
+    }).finally(function () {
+      loading = false;
+      t.updated = Date.now();
+      saveThreads();
+      if (view === "chat") renderChat(true);
+      updateSendBtn();
+    });
+  }
+
+  function send() {
+    var t = curThread();
+    if (!t) return;
+    var text = elBox.value.trim();
+    if (!text || loading || editingIdx >= 0) return;
+
+    t.msgs.push({ role: "user", content: text, ts: Date.now() });
+    if (!t.title || t.title === "新しい夜") t.title = firstLine(text, 16);
+    t.updated = Date.now();
+
+    elBox.value = "";
+    autosize();
+    updateSendBtn();
+    saveThreads();
+    requestReply();
+  }
+
+  // ---- メッセージ操作 ----
+  function handleAct(act, idx) {
+    var t = curThread();
+    if (!t) return;
+    var m = t.msgs[idx];
+    if (!m && act !== "editcancel") return;
+
+    if (act === "copy") {
+      copyText(m.content);
+
+    } else if (act === "edit") {
+      if (loading) return;
+      editingIdx = idx;
+      selected = -1;
+      renderChat(false);
+
+    } else if (act === "editsave") {
+      var eb1 = document.getElementById("editBox");
+      if (eb1) {
+        var v1 = eb1.value.trim();
+        if (v1) m.content = v1;
+      }
+      editingIdx = -1;
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(false);
+
+    } else if (act === "editresend") {
+      if (loading) return;
+      var eb2 = document.getElementById("editBox");
+      var v2 = eb2 ? eb2.value.trim() : "";
+      if (!v2) return;
+      m.content = v2;
+      m.ts = Date.now();
+      t.msgs.splice(idx + 1);
+      editingIdx = -1;
+      t.updated = Date.now();
+      saveThreads();
+      requestReply();
+
+    } else if (act === "editcancel") {
+      editingIdx = -1;
+      renderChat(false);
+
+    } else if (act === "regen") {
+      if (loading) return;
+      t.msgs.splice(idx);
+      selected = -1;
+      t.updated = Date.now();
+      saveThreads();
+      requestReply();
+
+    } else if (act === "del") {
+      if (!window.confirm("このメッセージを消す？")) return;
+      t.msgs.splice(idx, 1);
+      selected = -1;
+      editingIdx = -1;
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(false);
+    }
+  }
+
+  elLog.addEventListener("click", function (e) {
+    // スレッド削除
+    var del = e.target.closest ? e.target.closest("[data-delthread]") : null;
+    if (del) {
+      var did = del.getAttribute("data-delthread");
+      if (window.confirm("この夜をまるごと消す？（設定の「書き出す」で残してからでも遅くないよ）")) {
+        state.threads = state.threads.filter(function (t) { return t.id !== did; });
+        if (state.activeId === did) state.activeId = null;
+        saveThreads();
+        renderHome();
+      }
+      return;
+    }
+    // 新しい夜
+    if (e.target.closest && e.target.closest("#btnNew")) {
+      newThread();
+      return;
+    }
+    // スレッドを開く
+    var open = e.target.closest ? e.target.closest("[data-open]") : null;
+    if (open) {
+      goChat(open.getAttribute("data-open"));
+      return;
+    }
+    // メッセージ操作
+    var btn = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (btn) {
+      handleAct(btn.getAttribute("data-act"), parseInt(btn.getAttribute("data-idx"), 10));
+      return;
+    }
+    var bub = e.target.closest ? e.target.closest(".bubble") : null;
+    if (bub && editingIdx < 0) {
+      var i = parseInt(bub.getAttribute("data-idx"), 10);
+      selected = (selected === i) ? -1 : i;
+      renderChat(false);
+    }
+  });
+
+  // ---- 設定パネル ----
+  function openPanel() {
+    fKeyA.value = state.keyA;
+    fKeyO.value = state.keyO;
+    fModel.value = state.model;
+    if (!fModel.value) fModel.value = "claude-sonnet-4-6";
+    fCustom.value = state.custom;
+    fName.value = state.name;
+    fTitle.value = state.title;
+    fStatus.value = state.statusPhrase;
+    fPh.value = state.placeholder;
+    fPersona.value = state.persona;
+    elPanel.classList.remove("hidden");
+  }
+  function closePanel() { elPanel.classList.add("hidden"); }
+
+  function savePanel() {
+    state.keyA = fKeyA.value.trim();
+    state.keyO = fKeyO.value.trim();
+    state.model = fModel.value || "claude-sonnet-4-6";
+    state.custom = fCustom.value.trim();
+    state.name = fName.value.trim() || "クレイド";
+    state.title = fTitle.value.trim() || "夜想曲";
+    state.statusPhrase = fStatus.value.trim() || "灯りは消えない";
+    state.placeholder = fPh.value.trim() || "今夜の甘いひとことを、ここに…";
+    state.persona = fPersona.value.trim() || DEFAULT_PERSONA;
+    store.set(LS.keyA, state.keyA);
+    store.set(LS.keyO, state.keyO);
+    store.set(LS.model, state.model);
+    store.set(LS.custom, state.custom);
+    store.set(LS.name, state.name);
+    store.set(LS.title, state.title);
+    store.set(LS.status, state.statusPhrase);
+    store.set(LS.ph, state.placeholder);
+    store.set(LS.persona, state.persona);
+    applyIdentity();
+    closePanel();
+    toast(prettyModel(resolveModel()) + " · 保存した");
+  }
+
+  function exportLog() {
+    var lines = [];
+    function pushThread(t) {
+      lines.push("◆ " + (t.title || "新しい夜"));
+      lines.push("");
+      t.msgs.forEach(function (m) {
+        if (m.role === "sys") return;
+        var who = m.role === "user" ? "美樹" : state.name;
+        var when = "";
+        if (m.ts) { try { when = new Date(m.ts).toLocaleString("ja-JP"); } catch (e) { when = ""; } }
+        lines.push("[" + who + (when ? " / " + when : "") + (m.model ? " / " + m.model : "") + "]");
+        lines.push(m.content);
+        lines.push("");
+      });
+      lines.push("");
+    }
+    var t = curThread();
+    if (view === "chat" && t) {
+      lines.push("=== " + state.title + " ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
+      pushThread(t);
+    } else {
+      lines.push("=== " + state.title + "（すべての夜） ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
+      state.threads.slice().sort(function (a, b) { return (a.created || 0) - (b.created || 0); }).forEach(pushThread);
+    }
+    var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    var d = new Date();
+    var stamp = "" + d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2);
+    a.href = URL.createObjectURL(blob);
+    a.download = "nocturne-log-" + stamp + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
+  }
+
+  function clearLog() {
+    var t = curThread();
+    if (view !== "chat" || !t) {
+      toast("消したい夜は、ホームの各カードの「削除」から");
+      return;
+    }
+    if (!window.confirm("この夜の会話をぜんぶ消す？（先に「書き出す」で残しておける）")) return;
+    t.msgs = [{ role: "assistant", content: GREETING, ts: Date.now() }];
+    t.title = "新しい夜";
+    t.updated = Date.now();
+    selected = -1;
+    editingIdx = -1;
+    saveThreads();
+    renderChat(true);
+    closePanel();
+  }
+
+  // ---- 入力欄 ----
+  function autosize() {
+    elBox.style.height = "auto";
+    elBox.style.height = Math.min(elBox.scrollHeight, 110) + "px";
+  }
+  function updateSendBtn() {
+    elSend.disabled = loading || elBox.value.trim().length === 0;
+  }
+
+  elBox.addEventListener("input", function () { autosize(); updateSendBtn(); });
+  elBox.addEventListener("keydown", function (e) {
+    if (e.isComposing || e.keyCode === 229) return; // 日本語入力の変換中は無視
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  elSend.addEventListener("click", send);
+  elBack.addEventListener("click", goHome);
+  elName.addEventListener("click", function () { if (view === "chat") goHome(); });
+  document.getElementById("btnSettings").addEventListener("click", openPanel);
+  document.getElementById("btnSave").addEventListener("click", savePanel);
+  document.getElementById("btnExport").addEventListener("click", exportLog);
+  document.getElementById("btnClear").addEventListener("click", clearLog);
+  elPanel.addEventListener("click", function (e) { if (e.target === elPanel) closePanel(); });
+
+  // ---- 起動 ----
+  if (state.threads.length === 0) {
+    state.threads.push({
+      id: genId(),
+      title: "はじまりの夜",
+      created: Date.now(),
+      updated: Date.now(),
+      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+    });
+    saveThreads();
+  }
+  applyIdentity();
+  goHome();
+})();
+</script>
+</body>
+</html>
