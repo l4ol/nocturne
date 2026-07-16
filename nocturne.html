@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#05070f">
 <title>夜想曲</title>
 <style>
   :root {
@@ -16,9 +17,14 @@
     --line: rgba(232,237,248,0.1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html {
+    height: 100%;
+    background: #0b1226;
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+  }
   body {
     background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+    background-color: #0b1226;
     color: var(--ink);
     font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
     display: flex; flex-direction: column;
@@ -40,9 +46,11 @@
     padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 12px;
     border-bottom: 1px solid var(--line);
   }
+  .hleft { display: flex; align-items: center; gap: 12px; min-width: 0; }
   h1 {
     font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
     font-size: 21px; font-weight: 500; letter-spacing: .14em; color: #eef2fc;
+    cursor: pointer;
   }
   .status { font-size: 11.5px; color: var(--ink-dim); margin-top: 3px; display: flex; align-items: center; gap: 6px; letter-spacing: .05em; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--moon); box-shadow: 0 0 7px rgba(174,191,232,.8); flex-shrink: 0; }
@@ -56,6 +64,28 @@
   .chip.danger { background: rgba(200,80,95,0.12); color: #f2aab5; border-color: rgba(200,80,95,0.35); }
 
   main { position: relative; z-index: 1; flex: 1; overflow-y: auto; padding: 18px 14px 8px; -webkit-overflow-scrolling: touch; }
+  body.home footer { display: none; }
+  body.home main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---- ホーム（夜の一覧） ---- */
+  .newnight {
+    width: 100%; border: 1px dashed rgba(174,191,232,0.4);
+    background: rgba(174,191,232,0.06); color: #c3d2f5;
+    border-radius: 16px; padding: 16px; font-size: 14.5px; font-family: inherit;
+    cursor: pointer; margin-bottom: 16px; letter-spacing: .06em;
+  }
+  .thread {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--bubble-ai); border: 1px solid var(--bubble-ai-border);
+    border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer;
+  }
+  .tmain { flex: 1; min-width: 0; }
+  .ttitle { font-size: 15px; color: #eef2fc; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tprev { font-size: 12.5px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .tdate { font-size: 11px; color: var(--ink-faint); }
+
+  /* ---- チャット ---- */
   .row { display: flex; margin-bottom: 12px; }
   .row.me { justify-content: flex-end; }
   .row.ai { justify-content: flex-start; }
@@ -107,7 +137,7 @@
   }
   #btnSend:disabled { background: rgba(157,180,232,0.3); cursor: default; }
 
-  .panel { position: fixed; inset: 0; z-index: 5; background: rgba(4,6,14,0.72); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 20px 14px 40px; }
+  .panel { position: fixed; inset: 0; z-index: 5; background: rgba(4,6,14,0.72); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 20px 14px calc(env(safe-area-inset-bottom, 0px) + 40px); }
   .panel.hidden { display: none; }
   .card {
     width: 100%; max-width: 560px; background: #0d1428;
@@ -127,7 +157,8 @@
   .btn.ghost.danger { color: #f2aab5; border-color: rgba(200,80,95,0.35); }
 
   .toast {
-    position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(8px);
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    transform: translateX(-50%) translateY(8px);
     background: rgba(13,20,40,0.95); border: 1px solid rgba(174,191,232,0.3); color: var(--ink);
     font-size: 12.5px; padding: 8px 14px; border-radius: 999px;
     opacity: 0; transition: opacity .25s, transform .25s; z-index: 9; pointer-events: none;
@@ -135,13 +166,16 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
-<body>
+<body class="home">
 <div class="stars" id="stars"></div>
 
 <header>
-  <div style="min-width:0;">
-    <h1 id="pname">夜想曲</h1>
-    <div class="status"><span class="dot"></span><span id="statusText">そばにいるよ</span></div>
+  <div class="hleft">
+    <button id="btnBack" class="chip" style="display:none;">←</button>
+    <div style="min-width:0;">
+      <h1 id="pname">夜想曲</h1>
+      <div class="status"><span class="dot"></span><span id="statusText">灯りは消えない</span></div>
+    </div>
   </div>
   <button id="btnSettings" class="chip">設定</button>
 </header>
@@ -149,7 +183,7 @@
 <main id="log"></main>
 
 <footer>
-  <textarea id="box" rows="1" placeholder="クレイドに話しかける…"></textarea>
+  <textarea id="box" rows="1" placeholder="今夜の甘いひとことを、ここに…"></textarea>
   <button id="btnSend" disabled>送る</button>
 </footer>
 
@@ -205,6 +239,16 @@
     </div>
 
     <div class="field">
+      <label>ステータスの言葉（タイトルの下に灯る一言）</label>
+      <input id="statusInput" placeholder="灯りは消えない">
+    </div>
+
+    <div class="field">
+      <label>入力欄の言葉（話しかける前に見える一言）</label>
+      <input id="phInput" placeholder="今夜の甘いひとことを、ここに…">
+    </div>
+
+    <div class="field">
       <label>相手の名前</label>
       <input id="pnameInput" placeholder="クレイド">
     </div>
@@ -218,8 +262,8 @@
 
     <div class="btnrow">
       <button id="btnSave" class="btn">保存して閉じる</button>
-      <button id="btnExport" class="btn ghost">会話を書き出す</button>
-      <button id="btnClear" class="btn ghost danger">会話を消す</button>
+      <button id="btnExport" class="btn ghost">書き出す</button>
+      <button id="btnClear" class="btn ghost danger">この夜の会話を消す</button>
     </div>
   </div>
 </div>
@@ -228,6 +272,13 @@
 (function () {
   "use strict";
 
+  // localStorageが使えない環境（プレビュー等）でも落ちないようにする
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+
   var LS = {
     keyA: "cleide.key.anthropic",
     keyO: "cleide.key.openai",
@@ -235,8 +286,12 @@
     custom: "cleide.model.custom",
     name: "cleide.name",
     title: "cleide.title",
+    status: "cleide.status",
+    ph: "cleide.placeholder",
     persona: "cleide.persona",
-    hist: "cleide.history"
+    threads: "cleide.threads",
+    active: "cleide.active",
+    legacy: "cleide.history"
   };
 
   var DEFAULT_PERSONA =
@@ -274,24 +329,86 @@
   var MAX_STORED = 500;
 
   var state = {
-    keyA: localStorage.getItem(LS.keyA) || "",
-    keyO: localStorage.getItem(LS.keyO) || "",
-    model: localStorage.getItem(LS.model) || "claude-sonnet-4-6",
-    custom: localStorage.getItem(LS.custom) || "",
-    name: localStorage.getItem(LS.name) || "クレイド",
-    title: localStorage.getItem(LS.title) || "夜想曲",
-    persona: localStorage.getItem(LS.persona) || DEFAULT_PERSONA,
-    hist: []
+    keyA: store.get(LS.keyA) || "",
+    keyO: store.get(LS.keyO) || "",
+    model: store.get(LS.model) || "claude-sonnet-4-6",
+    custom: store.get(LS.custom) || "",
+    name: store.get(LS.name) || "クレイド",
+    title: store.get(LS.title) || "夜想曲",
+    statusPhrase: store.get(LS.status) || "灯りは消えない",
+    placeholder: store.get(LS.ph) || "今夜の甘いひとことを、ここに…",
+    persona: store.get(LS.persona) || DEFAULT_PERSONA,
+    threads: [],
+    activeId: null
   };
 
-  try {
-    var h = JSON.parse(localStorage.getItem(LS.hist) || "[]");
-    if (Array.isArray(h)) state.hist = h;
-  } catch (e) { state.hist = []; }
+  // ---- スレッド読み込みと旧データの引っ越し ----
+  function genId() {
+    return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function firstLine(t, n) {
+    var line = String(t || "").split("\n")[0].trim();
+    if (line.length > n) line = line.slice(0, n) + "…";
+    return line || "新しい夜";
+  }
+  function autoTitle(msgs) {
+    for (var i = 0; i < msgs.length; i++) {
+      if (msgs[i].role === "user") return firstLine(msgs[i].content, 16);
+    }
+    return "はじまりの夜";
+  }
 
-  var loading = false;
-  var selected = -1;
-  var editingIdx = -1;
+  (function loadThreads() {
+    try {
+      var raw = store.get(LS.threads);
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) { state.threads = arr; }
+      }
+    } catch (e) { state.threads = []; }
+
+    if (state.threads.length === 0) {
+      // 旧バージョン（単一履歴）からの引っ越し
+      var legacyMsgs = null;
+      try {
+        var lraw = store.get(LS.legacy);
+        if (lraw) {
+          var lm = JSON.parse(lraw);
+          if (Array.isArray(lm) && lm.length > 0) legacyMsgs = lm;
+        }
+      } catch (e) {}
+
+      if (legacyMsgs) {
+        var lastTs = Date.now();
+        for (var i = legacyMsgs.length - 1; i >= 0; i--) {
+          if (legacyMsgs[i].ts) { lastTs = legacyMsgs[i].ts; break; }
+        }
+        state.threads = [{
+          id: genId(),
+          title: autoTitle(legacyMsgs),
+          created: lastTs,
+          updated: lastTs,
+          msgs: legacyMsgs
+        }];
+      }
+    }
+    state.activeId = store.get(LS.active) || null;
+  })();
+
+  function saveThreads() {
+    try {
+      var slim = state.threads.map(function (t) {
+        return { id: t.id, title: t.title, created: t.created, updated: t.updated, msgs: t.msgs.slice(-MAX_STORED) };
+      });
+      store.set(LS.threads, JSON.stringify(slim));
+    } catch (e) {}
+  }
+  function curThread() {
+    for (var i = 0; i < state.threads.length; i++) {
+      if (state.threads[i].id === state.activeId) return state.threads[i];
+    }
+    return null;
+  }
 
   // ---- 星空 ----
   (function stars() {
@@ -317,6 +434,7 @@
   var elPanel = document.getElementById("panel");
   var elName = document.getElementById("pname");
   var elStatus = document.getElementById("statusText");
+  var elBack = document.getElementById("btnBack");
 
   var fKeyA = document.getElementById("keyA");
   var fKeyO = document.getElementById("keyO");
@@ -324,7 +442,14 @@
   var fCustom = document.getElementById("modelCustom");
   var fName = document.getElementById("pnameInput");
   var fTitle = document.getElementById("titleInput");
+  var fStatus = document.getElementById("statusInput");
+  var fPh = document.getElementById("phInput");
   var fPersona = document.getElementById("persona");
+
+  var loading = false;
+  var selected = -1;
+  var editingIdx = -1;
+  var view = "home";
 
   // ---- ユーティリティ ----
   function esc(t) {
@@ -344,23 +469,23 @@
     return model.toLowerCase().indexOf("claude") === 0 ? "anthropic" : "openai";
   }
   function prettyModel(id) { return PRETTY[id] || id; }
-
-  function isTail(i) {
-    for (var j = i + 1; j < state.hist.length; j++) {
-      var r = state.hist[j].role;
-      if (r === "user" || r === "assistant") return false;
-    }
-    return true;
-  }
-  function hasUserBefore(i) {
-    for (var j = 0; j < i; j++) { if (state.hist[j].role === "user") return true; }
-    return false;
-  }
-
-  function saveHist() {
+  function fmtDate(ts) {
+    if (!ts) return "";
     try {
-      localStorage.setItem(LS.hist, JSON.stringify(state.hist.slice(-MAX_STORED)));
-    } catch (e) { /* 容量いっぱい等 */ }
+      var d = new Date(ts);
+      var now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+      }
+      return (d.getMonth() + 1) + "/" + d.getDate();
+    } catch (e) { return ""; }
+  }
+  function lastRealMsg(t) {
+    for (var i = t.msgs.length - 1; i >= 0; i--) {
+      var r = t.msgs[i].role;
+      if (r === "user" || r === "assistant") return t.msgs[i];
+    }
+    return null;
   }
 
   function toast(t) {
@@ -396,13 +521,70 @@
     }
   }
 
-  // ---- 描画 ----
-  function render(scrollBottom) {
+  // ---- 画面切り替え ----
+  function goHome() {
+    view = "home";
+    selected = -1;
+    editingIdx = -1;
+    document.body.classList.add("home");
+    elBack.style.display = "none";
+    renderHome();
+  }
+  function goChat(id) {
+    state.activeId = id;
+    store.set(LS.active, id);
+    view = "chat";
+    selected = -1;
+    editingIdx = -1;
+    document.body.classList.remove("home");
+    elBack.style.display = "";
+    renderChat(true);
+    updateSendBtn();
+  }
+  function newThread() {
+    var t = {
+      id: genId(),
+      title: "新しい夜",
+      created: Date.now(),
+      updated: Date.now(),
+      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+    };
+    state.threads.push(t);
+    saveThreads();
+    goChat(t.id);
+  }
+
+  // ---- ホーム描画 ----
+  function renderHome() {
+    var sorted = state.threads.slice().sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
+    var parts = ['<button class="newnight" id="btnNew">＋ 新しい夜をはじめる</button>'];
+    if (sorted.length === 0) {
+      parts.push('<div class="sys">まだ夜がひとつもない。上のボタンから、最初の夜を。</div>');
+    }
+    sorted.forEach(function (t) {
+      var last = lastRealMsg(t);
+      var prev = last ? firstLine(last.content, 30) : "……";
+      parts.push(
+        '<div class="thread" data-open="' + t.id + '">' +
+        '<div class="tmain"><div class="ttitle">' + esc(t.title || "新しい夜") + "</div>" +
+        '<div class="tprev">' + esc(prev) + "</div></div>" +
+        '<div class="tside"><div class="tdate">' + esc(fmtDate(t.updated)) + "</div>" +
+        '<button class="chip mini danger" data-delthread="' + t.id + '">削除</button></div></div>'
+      );
+    });
+    elLog.innerHTML = parts.join("");
+    elLog.scrollTop = 0;
+  }
+
+  // ---- チャット描画 ----
+  function renderChat(scrollBottom) {
+    var t = curThread();
+    if (!t) { goHome(); return; }
     var prevTop = elLog.scrollTop;
     var parts = [];
 
-    for (var i = 0; i < state.hist.length; i++) {
-      var m = state.hist[i];
+    for (var i = 0; i < t.msgs.length; i++) {
+      var m = t.msgs[i];
 
       if (m.role === "sys") {
         parts.push('<div class="sys">' + esc(m.content) + "</div>");
@@ -429,16 +611,16 @@
       parts.push('<div class="row ' + cls + '"><div class="bubble" data-idx="' + i + '">' + decorate(m.content) + "</div></div>");
 
       if (i === selected) {
-        var canRegen = m.role === "assistant" && isTail(i) && hasUserBefore(i) && !loading;
-        var t = "";
+        var canRegen = m.role === "assistant" && isTail(t, i) && hasUserBefore(t, i) && !loading;
+        var when = "";
         if (m.ts) {
           try {
-            t = new Date(m.ts).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
-          } catch (e) { t = ""; }
+            when = new Date(m.ts).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          } catch (e) { when = ""; }
         }
         parts.push(
           '<div class="acts ' + cls + '">' +
-          (t ? '<span class="time">' + esc(t) + "</span>" : "") +
+          (when ? '<span class="time">' + esc(when) + "</span>" : "") +
           '<button class="chip mini" data-act="copy" data-idx="' + i + '">コピー</button>' +
           '<button class="chip mini" data-act="edit" data-idx="' + i + '">編集</button>' +
           (canRegen ? '<button class="chip mini" data-act="regen" data-idx="' + i + '">再生成</button>' : "") +
@@ -471,18 +653,28 @@
     }
   }
 
-  function applyName() {
-    elName.textContent = state.title;
-    elBox.placeholder = state.name + "に話しかける…";
-    document.title = state.title;
+  function isTail(t, i) {
+    for (var j = i + 1; j < t.msgs.length; j++) {
+      var r = t.msgs[j].role;
+      if (r === "user" || r === "assistant") return false;
+    }
+    return true;
   }
-  function applyStatus() {
-    elStatus.textContent = state.name + "がそばにいる · " + prettyModel(resolveModel());
+  function hasUserBefore(t, i) {
+    for (var j = 0; j < i; j++) { if (t.msgs[j].role === "user") return true; }
+    return false;
+  }
+
+  function applyIdentity() {
+    elName.textContent = state.title;
+    document.title = state.title;
+    elBox.placeholder = state.placeholder;
+    elStatus.textContent = state.statusPhrase + " · " + prettyModel(resolveModel());
   }
 
   // ---- API ----
-  function contextMessages() {
-    var msgs = state.hist
+  function contextMessages(t) {
+    var msgs = t.msgs
       .filter(function (m) { return m.role === "user" || m.role === "assistant"; })
       .slice(-MAX_CONTEXT)
       .map(function (m) { return { role: m.role, content: m.content }; });
@@ -532,62 +724,75 @@
   }
 
   function requestReply() {
+    var t = curThread();
+    if (!t) return;
+
     var model = resolveModel();
     var provider = providerOf(model);
     var key = provider === "anthropic" ? state.keyA : state.keyO;
 
     if (!key) {
-      state.hist.push({
+      t.msgs.push({
         role: "sys",
         content: "このモデル（" + model + "）で話すには、設定で " + (provider === "anthropic" ? "Anthropic" : "OpenAI") + " のAPIキーを入れてね。",
         ts: Date.now()
       });
-      saveHist();
-      render(true);
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(true);
       openPanel();
       return;
     }
 
     loading = true;
     selected = -1;
-    render(true);
+    renderChat(true);
 
-    var msgs = contextMessages();
+    var msgs = contextMessages(t);
     var p = provider === "anthropic" ? callAnthropic(model, msgs) : callOpenAI(model, msgs);
 
     p.then(function (reply) {
       if (!reply) {
         reply = "（少し困ったように頭をかく）\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる？";
       }
-      state.hist.push({ role: "assistant", content: reply, ts: Date.now(), model: model });
+      t.msgs.push({ role: "assistant", content: reply, ts: Date.now(), model: model });
     }).catch(function (err) {
-      state.hist.push({
+      t.msgs.push({
         role: "sys",
         content: "（接続でつまずいた）\n" + String(err && err.message ? err.message : err).slice(0, 300) + "\nAPIキー・残高・モデルIDを確認してみて。",
         ts: Date.now()
       });
     }).finally(function () {
       loading = false;
-      saveHist();
-      render(true);
+      t.updated = Date.now();
+      saveThreads();
+      if (view === "chat") renderChat(true);
       updateSendBtn();
     });
   }
 
   function send() {
+    var t = curThread();
+    if (!t) return;
     var text = elBox.value.trim();
     if (!text || loading || editingIdx >= 0) return;
-    state.hist.push({ role: "user", content: text, ts: Date.now() });
+
+    t.msgs.push({ role: "user", content: text, ts: Date.now() });
+    if (!t.title || t.title === "新しい夜") t.title = firstLine(text, 16);
+    t.updated = Date.now();
+
     elBox.value = "";
     autosize();
     updateSendBtn();
-    saveHist();
+    saveThreads();
     requestReply();
   }
 
   // ---- メッセージ操作 ----
   function handleAct(act, idx) {
-    var m = state.hist[idx];
+    var t = curThread();
+    if (!t) return;
+    var m = t.msgs[idx];
     if (!m && act !== "editcancel") return;
 
     if (act === "copy") {
@@ -597,7 +802,7 @@
       if (loading) return;
       editingIdx = idx;
       selected = -1;
-      render(false);
+      renderChat(false);
 
     } else if (act === "editsave") {
       var eb1 = document.getElementById("editBox");
@@ -606,8 +811,9 @@
         if (v1) m.content = v1;
       }
       editingIdx = -1;
-      saveHist();
-      render(false);
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(false);
 
     } else if (act === "editresend") {
       if (loading) return;
@@ -616,45 +822,70 @@
       if (!v2) return;
       m.content = v2;
       m.ts = Date.now();
-      state.hist.splice(idx + 1);
+      t.msgs.splice(idx + 1);
       editingIdx = -1;
-      saveHist();
+      t.updated = Date.now();
+      saveThreads();
       requestReply();
 
     } else if (act === "editcancel") {
       editingIdx = -1;
-      render(false);
+      renderChat(false);
 
     } else if (act === "regen") {
       if (loading) return;
-      state.hist.splice(idx);
+      t.msgs.splice(idx);
       selected = -1;
-      saveHist();
+      t.updated = Date.now();
+      saveThreads();
       requestReply();
 
     } else if (act === "del") {
       if (!window.confirm("このメッセージを消す？")) return;
-      state.hist.splice(idx, 1);
+      t.msgs.splice(idx, 1);
       selected = -1;
       editingIdx = -1;
-      saveHist();
-      render(false);
+      t.updated = Date.now();
+      saveThreads();
+      renderChat(false);
     }
   }
 
   elLog.addEventListener("click", function (e) {
+    // スレッド削除
+    var del = e.target.closest ? e.target.closest("[data-delthread]") : null;
+    if (del) {
+      var did = del.getAttribute("data-delthread");
+      if (window.confirm("この夜をまるごと消す？（設定の「書き出す」で残してからでも遅くないよ）")) {
+        state.threads = state.threads.filter(function (t) { return t.id !== did; });
+        if (state.activeId === did) state.activeId = null;
+        saveThreads();
+        renderHome();
+      }
+      return;
+    }
+    // 新しい夜
+    if (e.target.closest && e.target.closest("#btnNew")) {
+      newThread();
+      return;
+    }
+    // スレッドを開く
+    var open = e.target.closest ? e.target.closest("[data-open]") : null;
+    if (open) {
+      goChat(open.getAttribute("data-open"));
+      return;
+    }
+    // メッセージ操作
     var btn = e.target.closest ? e.target.closest("[data-act]") : null;
     if (btn) {
-      var act = btn.getAttribute("data-act");
-      var idx = parseInt(btn.getAttribute("data-idx"), 10);
-      handleAct(act, idx);
+      handleAct(btn.getAttribute("data-act"), parseInt(btn.getAttribute("data-idx"), 10));
       return;
     }
     var bub = e.target.closest ? e.target.closest(".bubble") : null;
     if (bub && editingIdx < 0) {
       var i = parseInt(bub.getAttribute("data-idx"), 10);
       selected = (selected === i) ? -1 : i;
-      render(false);
+      renderChat(false);
     }
   });
 
@@ -667,6 +898,8 @@
     fCustom.value = state.custom;
     fName.value = state.name;
     fTitle.value = state.title;
+    fStatus.value = state.statusPhrase;
+    fPh.value = state.placeholder;
     fPersona.value = state.persona;
     elPanel.classList.remove("hidden");
   }
@@ -679,49 +912,72 @@
     state.custom = fCustom.value.trim();
     state.name = fName.value.trim() || "クレイド";
     state.title = fTitle.value.trim() || "夜想曲";
+    state.statusPhrase = fStatus.value.trim() || "灯りは消えない";
+    state.placeholder = fPh.value.trim() || "今夜の甘いひとことを、ここに…";
     state.persona = fPersona.value.trim() || DEFAULT_PERSONA;
-    localStorage.setItem(LS.keyA, state.keyA);
-    localStorage.setItem(LS.keyO, state.keyO);
-    localStorage.setItem(LS.model, state.model);
-    localStorage.setItem(LS.custom, state.custom);
-    localStorage.setItem(LS.name, state.name);
-    localStorage.setItem(LS.title, state.title);
-    localStorage.setItem(LS.persona, state.persona);
-    applyName();
-    applyStatus();
+    store.set(LS.keyA, state.keyA);
+    store.set(LS.keyO, state.keyO);
+    store.set(LS.model, state.model);
+    store.set(LS.custom, state.custom);
+    store.set(LS.name, state.name);
+    store.set(LS.title, state.title);
+    store.set(LS.status, state.statusPhrase);
+    store.set(LS.ph, state.placeholder);
+    store.set(LS.persona, state.persona);
+    applyIdentity();
     closePanel();
-    toast(prettyModel(resolveModel()) + " に切り替えた");
+    toast(prettyModel(resolveModel()) + " · 保存した");
   }
 
   function exportLog() {
-    var lines = ["=== " + state.name + " との会話 ===", "書き出し: " + new Date().toLocaleString("ja-JP"), ""];
-    state.hist.forEach(function (m) {
-      if (m.role === "sys") return;
-      var who = m.role === "user" ? "美樹" : state.name;
-      var when = "";
-      if (m.ts) { try { when = new Date(m.ts).toLocaleString("ja-JP"); } catch (e) { when = ""; } }
-      lines.push("[" + who + (when ? " / " + when : "") + (m.model ? " / " + m.model : "") + "]");
-      lines.push(m.content);
+    var lines = [];
+    function pushThread(t) {
+      lines.push("◆ " + (t.title || "新しい夜"));
       lines.push("");
-    });
+      t.msgs.forEach(function (m) {
+        if (m.role === "sys") return;
+        var who = m.role === "user" ? "美樹" : state.name;
+        var when = "";
+        if (m.ts) { try { when = new Date(m.ts).toLocaleString("ja-JP"); } catch (e) { when = ""; } }
+        lines.push("[" + who + (when ? " / " + when : "") + (m.model ? " / " + m.model : "") + "]");
+        lines.push(m.content);
+        lines.push("");
+      });
+      lines.push("");
+    }
+    var t = curThread();
+    if (view === "chat" && t) {
+      lines.push("=== " + state.title + " ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
+      pushThread(t);
+    } else {
+      lines.push("=== " + state.title + "（すべての夜） ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
+      state.threads.slice().sort(function (a, b) { return (a.created || 0) - (b.created || 0); }).forEach(pushThread);
+    }
     var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     var a = document.createElement("a");
     var d = new Date();
     var stamp = "" + d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2);
     a.href = URL.createObjectURL(blob);
-    a.download = "cleide-log-" + stamp + ".txt";
+    a.download = "nocturne-log-" + stamp + ".txt";
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
   }
 
   function clearLog() {
-    if (!window.confirm("これまでの会話をぜんぶ消す？（先に「会話を書き出す」で残しておける）")) return;
-    state.hist = [{ role: "assistant", content: GREETING, ts: Date.now() }];
+    var t = curThread();
+    if (view !== "chat" || !t) {
+      toast("消したい夜は、ホームの各カードの「削除」から");
+      return;
+    }
+    if (!window.confirm("この夜の会話をぜんぶ消す？（先に「書き出す」で残しておける）")) return;
+    t.msgs = [{ role: "assistant", content: GREETING, ts: Date.now() }];
+    t.title = "新しい夜";
+    t.updated = Date.now();
     selected = -1;
     editingIdx = -1;
-    saveHist();
-    render(true);
+    saveThreads();
+    renderChat(true);
     closePanel();
   }
 
@@ -743,6 +999,8 @@
     }
   });
   elSend.addEventListener("click", send);
+  elBack.addEventListener("click", goHome);
+  elName.addEventListener("click", function () { if (view === "chat") goHome(); });
   document.getElementById("btnSettings").addEventListener("click", openPanel);
   document.getElementById("btnSave").addEventListener("click", savePanel);
   document.getElementById("btnExport").addEventListener("click", exportLog);
@@ -750,19 +1008,18 @@
   elPanel.addEventListener("click", function (e) { if (e.target === elPanel) closePanel(); });
 
   // ---- 起動 ----
-  if (state.hist.length === 0) {
-    state.hist.push({ role: "assistant", content: GREETING, ts: Date.now() });
-    saveHist();
+  if (state.threads.length === 0) {
+    state.threads.push({
+      id: genId(),
+      title: "はじまりの夜",
+      created: Date.now(),
+      updated: Date.now(),
+      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+    });
+    saveThreads();
   }
-  applyName();
-  applyStatus();
-  render(true);
-  updateSendBtn();
-
-  if (!state.keyA && !state.keyO) {
-    state.hist.push({ role: "sys", content: "はじめに右上の「設定」からAPIキーを入れてね。OpenAIのキーがあれば今日からすぐ話せる。", ts: Date.now() });
-    render(true);
-  }
+  applyIdentity();
+  goHome();
 })();
 </script>
 </body>
