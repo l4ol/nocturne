@@ -155,6 +155,15 @@
   }
   .card h2 { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 500; letter-spacing: .12em; font-size: 18px; margin-bottom: 16px; }
   .card h3 { font-size: 13px; color: var(--ink-dim); letter-spacing: .08em; margin: 20px 0 10px; font-weight: 600; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab {
+    flex: 1; background: none; border: 1px solid rgba(232,237,248,0.14);
+    color: var(--ink-dim); border-radius: 999px; padding: 8px 2px;
+    font-size: 12.5px; font-family: inherit; cursor: pointer; letter-spacing: .03em;
+  }
+  .tab.on { background: rgba(174,191,232,0.14); color: #dbe5f8; border-color: rgba(174,191,232,0.45); }
+  .tabpage { display: none; }
+  .tabpage.on { display: block; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12.5px; color: var(--ink-dim); margin-bottom: 6px; letter-spacing: .04em; }
   .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; line-height: 1.6; }
@@ -202,6 +211,15 @@
   <div class="card">
     <h2>設定</h2>
 
+    <div class="tabs">
+      <button type="button" class="tab on" data-tab="conn">接続</button>
+      <button type="button" class="tab" data-tab="param">パラメータ</button>
+      <button type="button" class="tab" data-tab="word">ことば</button>
+      <button type="button" class="tab" data-tab="soul">人格</button>
+    </div>
+
+    <div class="tabpage on" id="tab-conn">
+
     <div class="field">
       <label>Anthropic APIキー (Claude系モデル用)</label>
       <input id="keyA" type="password" placeholder="sk-ant-..." autocomplete="off">
@@ -244,7 +262,9 @@
       <input id="modelCustom" placeholder="例: claude-... / gpt-...">
     </div>
 
-    <h3>パラメータ</h3>
+    </div>
+
+    <div class="tabpage" id="tab-param">
 
     <div class="field">
       <label>温度 (0〜1。低いほど落ち着き、高いほど気まぐれ。空欄で標準)</label>
@@ -263,7 +283,9 @@
       <div class="hint">多いほど文脈は深くなるけど、APIの消費も増える。</div>
     </div>
 
-    <h3>ことばと姿</h3>
+    </div>
+
+    <div class="tabpage" id="tab-word">
 
     <div class="field">
       <label>アプリのタイトル (上に飾る言葉)</label>
@@ -285,9 +307,15 @@
       <input id="pnameInput" placeholder="クレイド">
     </div>
 
+    </div>
+
+    <div class="tabpage" id="tab-soul">
+
     <div class="field">
       <label>人格・関係の設定 (自由に書き換えていい)</label>
-      <textarea id="persona" rows="11"></textarea>
+      <textarea id="persona" rows="14"></textarea>
+    </div>
+
     </div>
 
     <div class="note">APIキーはこの端末のブラウザの中 (localStorage) にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
@@ -969,6 +997,27 @@
     elPanel.classList.remove("hidden");
   }
   function closePanel() { elPanel.classList.add("hidden"); }
+
+  // 設定タブの切り替え
+  (function () {
+    var tabs = elPanel.querySelectorAll(".tab");
+    function show(name) {
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].getAttribute("data-tab") === name) tabs[i].classList.add("on");
+        else tabs[i].classList.remove("on");
+      }
+      var pages = elPanel.querySelectorAll(".tabpage");
+      for (var j = 0; j < pages.length; j++) {
+        if (pages[j].id === "tab-" + name) pages[j].classList.add("on");
+        else pages[j].classList.remove("on");
+      }
+    }
+    for (var k = 0; k < tabs.length; k++) {
+      (function (b) {
+        b.addEventListener("click", function () { show(b.getAttribute("data-tab")); });
+      })(tabs[k]);
+    }
+  })();
 
   function savePanel() {
     state.keyA = fKeyA.value.trim();
