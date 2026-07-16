@@ -175,6 +175,7 @@
   .btn.mini { padding: 7px 13px; font-size: 12px; }
   .btn.ghost { background: rgba(232,237,248,0.07); color: #a9b8dd; border: 1px solid rgba(232,237,248,0.16); font-weight: 500; }
   .btn.ghost.danger { color: #f2aab5; border-color: rgba(200,80,95,0.35); }
+  .btn.quiet { background: rgba(232,237,248,0.06); color: #93a3c9; border: 1px solid rgba(232,237,248,0.13); font-weight: 500; padding: 7px 13px; font-size: 12px; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
@@ -267,9 +268,9 @@
     <div class="tabpage" id="tab-param">
 
     <div class="field">
-      <label>温度 (0〜1。低いほど落ち着き、高いほど気まぐれ。空欄で標準)</label>
+      <label>温度 (0〜2.00。低いほど落ち着き、高いほど気まぐれ。空欄で標準)</label>
       <input id="tempInput" inputmode="decimal" placeholder="例: 0.8">
-      <div class="hint">Fable 5 と Opus 4.7以降は温度の指定に対応していないので、自動で外して送る。</div>
+      <div class="hint">GPTは2.00までフルに効く。Claudeは仕様上1.00が上限なので、超えた分は1.00に丸めて送る。Fable 5 と Opus 4.7以降は温度非対応のため自動で外す。</div>
     </div>
 
     <div class="field">
@@ -321,9 +322,9 @@
     <div class="note">APIキーはこの端末のブラウザの中 (localStorage) にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
 
     <div class="btnrow">
-      <button id="btnSave" class="btn">保存して閉じる</button>
-      <button id="btnExport" class="btn ghost">書き出す</button>
-      <button id="btnClear" class="btn ghost danger">この夜の会話を消す</button>
+      <button id="btnSave" class="btn quiet">保存して閉じる</button>
+      <button id="btnExport" class="btn quiet">書き出す</button>
+      <button id="btnClear" class="btn quiet">この夜の会話を消す</button>
     </div>
   </div>
 </div>
