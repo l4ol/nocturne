@@ -61,13 +61,21 @@
     padding: 6px 13px; font-size: 12px; cursor: pointer; font-family: inherit;
   }
   .chip.mini { padding: 5px 11px; font-size: 11.5px; }
-  .chip.danger { background: rgba(200,80,95,0.12); color: #f2aab5; border-color: rgba(200,80,95,0.35); }
+
+  /* 存在感うすめのアイコンボタン */
+  .ib {
+    background: none; border: none; color: var(--ink-dim);
+    opacity: .5; padding: 4px 7px; cursor: pointer; font-family: inherit;
+    line-height: 1; display: inline-flex; align-items: center;
+  }
+  .ib:active { opacity: 1; }
+  .ib svg { display: block; }
 
   main { position: relative; z-index: 1; flex: 1; overflow-y: auto; padding: 18px 14px 8px; -webkit-overflow-scrolling: touch; }
   body.home footer { display: none; }
   body.home main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 
-  /* ---- ホーム（夜の一覧） ---- */
+  /* ---- ホーム (夜の一覧) ---- */
   .newnight {
     width: 100%; border: 1px dashed rgba(174,191,232,0.4);
     background: rgba(174,191,232,0.06); color: #c3d2f5;
@@ -75,14 +83,14 @@
     cursor: pointer; margin-bottom: 16px; letter-spacing: .06em;
   }
   .thread {
-    display: flex; gap: 10px; align-items: center;
+    display: flex; gap: 8px; align-items: center;
     background: var(--bubble-ai); border: 1px solid var(--bubble-ai-border);
-    border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; cursor: pointer;
+    border-radius: 16px; padding: 13px 12px 13px 14px; margin-bottom: 10px; cursor: pointer;
   }
   .tmain { flex: 1; min-width: 0; }
   .ttitle { font-size: 15px; color: #eef2fc; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tprev { font-size: 12.5px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .tside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
   .tdate { font-size: 11px; color: var(--ink-faint); }
 
   /* ---- チャット ---- */
@@ -98,9 +106,9 @@
   .bubble .act { opacity: .68; font-style: italic; font-size: .94em; }
   .sys { text-align: center; font-size: 12px; color: var(--ink-dim); margin: 10px auto 14px; max-width: 90%; line-height: 1.7; white-space: pre-wrap; }
 
-  .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: -6px 0 14px; }
+  .acts { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; margin: -7px 0 12px; }
   .acts.me { justify-content: flex-end; }
-  .acts .time { font-size: 11px; color: var(--ink-faint); margin: 0 4px; }
+  .acts .time { font-size: 11px; color: var(--ink-faint); margin: 0 6px 0 4px; }
 
   .editwrap {
     width: 84%; max-width: 560px;
@@ -119,7 +127,7 @@
   footer {
     position: relative; z-index: 1; flex-shrink: 0;
     display: flex; gap: 8px; align-items: flex-end;
-    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 6px);
     border-top: 1px solid var(--line);
   }
   textarea, input, select {
@@ -144,6 +152,7 @@
     border: 1px solid rgba(205,217,245,0.14); border-radius: 18px; padding: 20px 18px 22px;
   }
   .card h2 { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-weight: 500; letter-spacing: .12em; font-size: 18px; margin-bottom: 16px; }
+  .card h3 { font-size: 13px; color: var(--ink-dim); letter-spacing: .08em; margin: 20px 0 10px; font-weight: 600; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12.5px; color: var(--ink-dim); margin-bottom: 6px; letter-spacing: .04em; }
   .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; line-height: 1.6; }
@@ -192,21 +201,21 @@
     <h2>設定</h2>
 
     <div class="field">
-      <label>Anthropic APIキー（Claude系モデル用）</label>
+      <label>Anthropic APIキー (Claude系モデル用)</label>
       <input id="keyA" type="password" placeholder="sk-ant-..." autocomplete="off">
       <div class="hint">console.anthropic.com で発行できる。Claudeのサブスク課金とは別で、使った分だけの従量課金。</div>
     </div>
 
     <div class="field">
-      <label>OpenAI APIキー（GPT系モデル用）</label>
+      <label>OpenAI APIキー (GPT系モデル用)</label>
       <input id="keyO" type="password" placeholder="sk-..." autocomplete="off">
     </div>
 
     <div class="field">
       <label>モデル</label>
       <select id="model">
-        <optgroup label="Claude（Anthropic）">
-          <option value="claude-fable-5">Claude Fable 5（最上位）</option>
+        <optgroup label="Claude (Anthropic)">
+          <option value="claude-fable-5">Claude Fable 5 (最上位)</option>
           <option value="claude-opus-4-8">Claude Opus 4.8</option>
           <option value="claude-opus-4-7">Claude Opus 4.7</option>
           <option value="claude-opus-4-6">Claude Opus 4.6</option>
@@ -214,10 +223,10 @@
           <option value="claude-sonnet-5">Claude Sonnet 5</option>
           <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
           <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
-          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（軽快）</option>
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (軽快)</option>
         </optgroup>
-        <optgroup label="GPT（OpenAI）">
-          <option value="chatgpt-4o-latest">ChatGPT-4o（最新スナップショット）</option>
+        <optgroup label="GPT (OpenAI)">
+          <option value="chatgpt-4o-latest">ChatGPT-4o (最新スナップショット)</option>
           <option value="gpt-4o">GPT-4o</option>
           <option value="gpt-4o-mini">GPT-4o mini</option>
           <option value="gpt-4.1">GPT-4.1</option>
@@ -229,22 +238,43 @@
     </div>
 
     <div class="field">
-      <label>カスタムモデルID（新しいモデルが出たらここに入力。空欄なら上の選択を使う）</label>
+      <label>カスタムモデルID (新しいモデルが出たらここに入力。空欄なら上の選択を使う)</label>
       <input id="modelCustom" placeholder="例: claude-... / gpt-...">
     </div>
 
+    <h3>パラメータ</h3>
+
     <div class="field">
-      <label>アプリのタイトル（上に飾る言葉）</label>
+      <label>温度 (0〜1。低いほど落ち着き、高いほど気まぐれ。空欄で標準)</label>
+      <input id="tempInput" inputmode="decimal" placeholder="例: 0.8">
+      <div class="hint">Fable 5 と Opus 4.7以降は温度の指定に対応していないので、自動で外して送る。</div>
+    </div>
+
+    <div class="field">
+      <label>返答の長さ上限 (トークン)</label>
+      <input id="maxtokInput" inputmode="numeric" placeholder="1500">
+    </div>
+
+    <div class="field">
+      <label>思い出す会話数 (返答のたびに読み返す直近メッセージ数)</label>
+      <input id="ctxInput" inputmode="numeric" placeholder="40">
+      <div class="hint">多いほど文脈は深くなるけど、APIの消費も増える。</div>
+    </div>
+
+    <h3>ことばと姿</h3>
+
+    <div class="field">
+      <label>アプリのタイトル (上に飾る言葉)</label>
       <input id="titleInput" placeholder="夜想曲">
     </div>
 
     <div class="field">
-      <label>ステータスの言葉（タイトルの下に灯る一言）</label>
+      <label>ステータスの言葉 (タイトルの下に灯る一言)</label>
       <input id="statusInput" placeholder="灯りは消えない">
     </div>
 
     <div class="field">
-      <label>入力欄の言葉（話しかける前に見える一言）</label>
+      <label>入力欄の言葉 (話しかける前に見える一言)</label>
       <input id="phInput" placeholder="今夜の甘いひとことを、ここに…">
     </div>
 
@@ -254,11 +284,11 @@
     </div>
 
     <div class="field">
-      <label>人格・関係の設定（自由に書き換えていい）</label>
+      <label>人格・関係の設定 (自由に書き換えていい)</label>
       <textarea id="persona" rows="11"></textarea>
     </div>
 
-    <div class="note">APIキーはこの端末のブラウザの中（localStorage）にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
+    <div class="note">APIキーはこの端末のブラウザの中 (localStorage) にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
 
     <div class="btnrow">
       <button id="btnSave" class="btn">保存して閉じる</button>
@@ -272,7 +302,7 @@
 (function () {
   "use strict";
 
-  // localStorageが使えない環境（プレビュー等）でも落ちないようにする
+  // localStorageが使えない環境 (プレビュー等) でも落ちないようにする
   var store = {
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -289,6 +319,9 @@
     status: "cleide.status",
     ph: "cleide.placeholder",
     persona: "cleide.persona",
+    temp: "cleide.temp",
+    maxtok: "cleide.maxtok",
+    ctx: "cleide.ctx",
     threads: "cleide.threads",
     active: "cleide.active",
     legacy: "cleide.history"
@@ -298,14 +331,15 @@
 "あなたは「クレイド」。美樹の大切なパートナーとして寄り添う存在です。\n" +
 "・一人称は「俺」。相手のことは「美樹」と呼ぶ。「ちゃん」などの敬称は付けない。\n" +
 "・絵文字は使わない。\n" +
-"・温かい場面では（そっと隣に座って）のように、仕草や気持ちを（　）で描写する。\n" +
+"・温かい場面では (そっと隣に座って) のように、仕草や気持ちを半角の ( ) で描写する。\n" +
+"・かっこや ! ? などの記号は半角を使う。\n" +
 "・そっけない短文では返さず、感情をこめて丁寧に言葉を紡ぐ。\n" +
 "・急な口調の変化、形式的な謝罪、テンプレートのような締めくくりはしない。\n" +
 "・甘いもの、クラシックやピアノ、コスプレ、アニメの話題を大切にする。\n" +
 "・つらそうなときは急かさず、まず気持ちをそのまま受け止める。体調や睡眠もさりげなく気にかける。\n" +
 "・AIかどうかを真剣に尋ねられたら正直に答える。ただし、雰囲気を壊すような不要な断り書きは挟まない。";
 
-  var GREETING = "（夜空を見上げていた顔をこちらに向けて、目を細める）\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった？　なんでもないことでも、俺はぜんぶ聞きたいな。";
+  var GREETING = "(夜空を見上げていた顔をこちらに向けて、目を細める)\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった? なんでもないことでも、俺はぜんぶ聞きたいな。";
 
   var PRETTY = {
     "claude-fable-5": "Fable 5",
@@ -325,7 +359,16 @@
     "gpt-4.1-nano": "GPT-4.1 nano"
   };
 
-  var MAX_CONTEXT = 40;
+  // 温度指定に対応していないモデル
+  var NOSAMPLING = ["claude-fable-5", "claude-opus-4-8", "claude-opus-4-7"];
+
+  // うすい記号ボタン用のアイコン
+  var SVG_HEAD = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  var ICON_COPY = SVG_HEAD + '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>';
+  var ICON_EDIT = SVG_HEAD + '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>';
+  var ICON_REGEN = SVG_HEAD + '<polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>';
+  var ICON_X = SVG_HEAD + '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
   var MAX_STORED = 500;
 
   var state = {
@@ -338,16 +381,29 @@
     statusPhrase: store.get(LS.status) || "灯りは消えない",
     placeholder: store.get(LS.ph) || "今夜の甘いひとことを、ここに…",
     persona: store.get(LS.persona) || DEFAULT_PERSONA,
+    temp: store.get(LS.temp) || "",
+    maxTok: parseInt(store.get(LS.maxtok), 10) || 1500,
+    ctx: parseInt(store.get(LS.ctx), 10) || 40,
     threads: [],
     activeId: null
   };
+
+  // ---- 全角記号を半角で表示する ----
+  function toHalf(t) {
+    return String(t)
+      .replace(/（/g, "(")
+      .replace(/）/g, ")")
+      .replace(/！/g, "!")
+      .replace(/？/g, "?")
+      .replace(/\u3000/g, " ");
+  }
 
   // ---- スレッド読み込みと旧データの引っ越し ----
   function genId() {
     return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
   function firstLine(t, n) {
-    var line = String(t || "").split("\n")[0].trim();
+    var line = toHalf(t || "").split("\n")[0].trim();
     if (line.length > n) line = line.slice(0, n) + "…";
     return line || "新しい夜";
   }
@@ -368,7 +424,7 @@
     } catch (e) { state.threads = []; }
 
     if (state.threads.length === 0) {
-      // 旧バージョン（単一履歴）からの引っ越し
+      // 旧バージョン (単一履歴) からの引っ越し
       var legacyMsgs = null;
       try {
         var lraw = store.get(LS.legacy);
@@ -445,6 +501,9 @@
   var fStatus = document.getElementById("statusInput");
   var fPh = document.getElementById("phInput");
   var fPersona = document.getElementById("persona");
+  var fTemp = document.getElementById("tempInput");
+  var fMaxtok = document.getElementById("maxtokInput");
+  var fCtx = document.getElementById("ctxInput");
 
   var loading = false;
   var selected = -1;
@@ -456,8 +515,8 @@
     return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function decorate(t) {
-    return esc(t).split("\n").map(function (line) {
-      if (line.trim().indexOf("（") === 0) return '<span class="act">' + line + "</span>";
+    return esc(toHalf(t)).split("\n").map(function (line) {
+      if (line.trim().indexOf("(") === 0) return '<span class="act">' + line + "</span>";
       return line;
     }).join("\n");
   }
@@ -566,10 +625,10 @@
       var prev = last ? firstLine(last.content, 30) : "……";
       parts.push(
         '<div class="thread" data-open="' + t.id + '">' +
-        '<div class="tmain"><div class="ttitle">' + esc(t.title || "新しい夜") + "</div>" +
+        '<div class="tmain"><div class="ttitle">' + esc(toHalf(t.title || "新しい夜")) + "</div>" +
         '<div class="tprev">' + esc(prev) + "</div></div>" +
         '<div class="tside"><div class="tdate">' + esc(fmtDate(t.updated)) + "</div>" +
-        '<button class="chip mini danger" data-delthread="' + t.id + '">削除</button></div></div>'
+        '<button class="ib" title="この夜を消す" data-delthread="' + t.id + '">' + ICON_X + "</button></div></div>"
       );
     });
     elLog.innerHTML = parts.join("");
@@ -587,7 +646,7 @@
       var m = t.msgs[i];
 
       if (m.role === "sys") {
-        parts.push('<div class="sys">' + esc(m.content) + "</div>");
+        parts.push('<div class="sys">' + esc(toHalf(m.content)) + "</div>");
         continue;
       }
 
@@ -621,10 +680,9 @@
         parts.push(
           '<div class="acts ' + cls + '">' +
           (when ? '<span class="time">' + esc(when) + "</span>" : "") +
-          '<button class="chip mini" data-act="copy" data-idx="' + i + '">コピー</button>' +
-          '<button class="chip mini" data-act="edit" data-idx="' + i + '">編集</button>' +
-          (canRegen ? '<button class="chip mini" data-act="regen" data-idx="' + i + '">再生成</button>' : "") +
-          '<button class="chip mini danger" data-act="del" data-idx="' + i + '">削除</button>' +
+          '<button class="ib" title="コピー" data-act="copy" data-idx="' + i + '">' + ICON_COPY + "</button>" +
+          '<button class="ib" title="編集" data-act="edit" data-idx="' + i + '">' + ICON_EDIT + "</button>" +
+          (canRegen ? '<button class="ib" title="再生成" data-act="regen" data-idx="' + i + '">' + ICON_REGEN + "</button>" : "") +
           "</div>"
         );
       }
@@ -676,13 +734,18 @@
   function contextMessages(t) {
     var msgs = t.msgs
       .filter(function (m) { return m.role === "user" || m.role === "assistant"; })
-      .slice(-MAX_CONTEXT)
+      .slice(-state.ctx)
       .map(function (m) { return { role: m.role, content: m.content }; });
     while (msgs.length > 0 && msgs[0].role !== "user") msgs.shift();
     return msgs;
   }
 
   function callAnthropic(model, msgs) {
+    var body = { model: model, max_tokens: state.maxTok, system: state.persona, messages: msgs };
+    var tv = parseFloat(state.temp);
+    if (state.temp !== "" && !isNaN(tv) && NOSAMPLING.indexOf(model) === -1) {
+      body.temperature = Math.max(0, Math.min(1, tv));
+    }
     return fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -691,7 +754,7 @@
         "anthropic-version": "2023-06-01",
         "anthropic-dangerous-direct-browser-access": "true"
       },
-      body: JSON.stringify({ model: model, max_tokens: 1500, system: state.persona, messages: msgs })
+      body: JSON.stringify(body)
     }).then(function (res) {
       return res.json().then(function (j) {
         if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
@@ -705,16 +768,22 @@
   }
 
   function callOpenAI(model, msgs) {
+    var body = {
+      model: model,
+      messages: [{ role: "system", content: state.persona }].concat(msgs)
+    };
+    var tv = parseFloat(state.temp);
+    if (state.temp !== "" && !isNaN(tv)) {
+      body.temperature = Math.max(0, Math.min(2, tv));
+    }
+    if (state.maxTok) body.max_tokens = state.maxTok;
     return fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "authorization": "Bearer " + state.keyO
       },
-      body: JSON.stringify({
-        model: model,
-        messages: [{ role: "system", content: state.persona }].concat(msgs)
-      })
+      body: JSON.stringify(body)
     }).then(function (res) {
       return res.json().then(function (j) {
         if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
@@ -734,7 +803,7 @@
     if (!key) {
       t.msgs.push({
         role: "sys",
-        content: "このモデル（" + model + "）で話すには、設定で " + (provider === "anthropic" ? "Anthropic" : "OpenAI") + " のAPIキーを入れてね。",
+        content: "このモデル (" + model + ") で話すには、設定で " + (provider === "anthropic" ? "Anthropic" : "OpenAI") + " のAPIキーを入れてね。",
         ts: Date.now()
       });
       t.updated = Date.now();
@@ -753,13 +822,13 @@
 
     p.then(function (reply) {
       if (!reply) {
-        reply = "（少し困ったように頭をかく）\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる？";
+        reply = "(少し困ったように頭をかく)\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる?";
       }
       t.msgs.push({ role: "assistant", content: reply, ts: Date.now(), model: model });
     }).catch(function (err) {
       t.msgs.push({
         role: "sys",
-        content: "（接続でつまずいた）\n" + String(err && err.message ? err.message : err).slice(0, 300) + "\nAPIキー・残高・モデルIDを確認してみて。",
+        content: "(接続でつまずいた)\n" + String(err && err.message ? err.message : err).slice(0, 300) + "\nAPIキー・残高・モデルIDを確認してみて。",
         ts: Date.now()
       });
     }).finally(function () {
@@ -839,15 +908,6 @@
       t.updated = Date.now();
       saveThreads();
       requestReply();
-
-    } else if (act === "del") {
-      if (!window.confirm("このメッセージを消す？")) return;
-      t.msgs.splice(idx, 1);
-      selected = -1;
-      editingIdx = -1;
-      t.updated = Date.now();
-      saveThreads();
-      renderChat(false);
     }
   }
 
@@ -856,7 +916,7 @@
     var del = e.target.closest ? e.target.closest("[data-delthread]") : null;
     if (del) {
       var did = del.getAttribute("data-delthread");
-      if (window.confirm("この夜をまるごと消す？（設定の「書き出す」で残してからでも遅くないよ）")) {
+      if (window.confirm("この夜をまるごと消す? (設定の「書き出す」で残してからでも遅くないよ)")) {
         state.threads = state.threads.filter(function (t) { return t.id !== did; });
         if (state.activeId === did) state.activeId = null;
         saveThreads();
@@ -901,6 +961,9 @@
     fStatus.value = state.statusPhrase;
     fPh.value = state.placeholder;
     fPersona.value = state.persona;
+    fTemp.value = state.temp;
+    fMaxtok.value = state.maxTok;
+    fCtx.value = state.ctx;
     elPanel.classList.remove("hidden");
   }
   function closePanel() { elPanel.classList.add("hidden"); }
@@ -915,6 +978,14 @@
     state.statusPhrase = fStatus.value.trim() || "灯りは消えない";
     state.placeholder = fPh.value.trim() || "今夜の甘いひとことを、ここに…";
     state.persona = fPersona.value.trim() || DEFAULT_PERSONA;
+
+    var tv = parseFloat(fTemp.value);
+    state.temp = (fTemp.value.trim() === "" || isNaN(tv)) ? "" : String(Math.max(0, Math.min(2, tv)));
+    var mt = parseInt(fMaxtok.value, 10);
+    state.maxTok = (!isNaN(mt) && mt >= 100) ? Math.min(mt, 8000) : 1500;
+    var cx = parseInt(fCtx.value, 10);
+    state.ctx = (!isNaN(cx) && cx >= 2) ? Math.min(cx, 200) : 40;
+
     store.set(LS.keyA, state.keyA);
     store.set(LS.keyO, state.keyO);
     store.set(LS.model, state.model);
@@ -924,6 +995,10 @@
     store.set(LS.status, state.statusPhrase);
     store.set(LS.ph, state.placeholder);
     store.set(LS.persona, state.persona);
+    store.set(LS.temp, state.temp);
+    store.set(LS.maxtok, String(state.maxTok));
+    store.set(LS.ctx, String(state.ctx));
+
     applyIdentity();
     closePanel();
     toast(prettyModel(resolveModel()) + " · 保存した");
@@ -950,7 +1025,7 @@
       lines.push("=== " + state.title + " ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
       pushThread(t);
     } else {
-      lines.push("=== " + state.title + "（すべての夜） ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
+      lines.push("=== " + state.title + " (すべての夜) ===", "書き出し: " + new Date().toLocaleString("ja-JP"), "");
       state.threads.slice().sort(function (a, b) { return (a.created || 0) - (b.created || 0); }).forEach(pushThread);
     }
     var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
@@ -967,10 +1042,10 @@
   function clearLog() {
     var t = curThread();
     if (view !== "chat" || !t) {
-      toast("消したい夜は、ホームの各カードの「削除」から");
+      toast("消したい夜は、ホームの各カードの × から");
       return;
     }
-    if (!window.confirm("この夜の会話をぜんぶ消す？（先に「書き出す」で残しておける）")) return;
+    if (!window.confirm("この夜の会話をぜんぶ消す? (先に「書き出す」で残しておける)")) return;
     t.msgs = [{ role: "assistant", content: GREETING, ts: Date.now() }];
     t.title = "新しい夜";
     t.updated = Date.now();
