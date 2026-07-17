@@ -331,6 +331,14 @@
       <button id="btnExport" class="btn quiet">書き出す</button>
       <button id="btnClear" class="btn quiet">この夜の会話を消す</button>
     </div>
+
+    <h3>しおり — 夜を失くさないために</h3>
+    <div class="note">iPhoneのSafariは、しばらく開かなかったサイトの保存データ (会話も設定も) を静かに消してしまうことがある。ときどき「まるごと控える」でファイルに残して、iCloud Driveなどに置いておいて。何かあっても「控えから戻す」で、夜も設定もぜんぶよみがえる。ホーム画面に追加して使うと、そもそも消えにくくなる。</div>
+    <div class="btnrow">
+      <button id="btnBackup" class="btn quiet">まるごと控える</button>
+      <button id="btnRestore" class="btn quiet">控えから戻す</button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json,application/json" style="display:none">
   </div>
 </div>
 
@@ -376,7 +384,20 @@
 "・つらそうなときは急かさず、まず気持ちをそのまま受け止める。体調や睡眠もさりげなく気にかける。\n" +
 "・AIかどうかを真剣に尋ねられたら正直に答える。ただし、雰囲気を壊すような不要な断り書きは挟まない。";
 
-  var GREETING = "(夜空を見上げていた顔をこちらに向けて、目を細める)\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった? なんでもないことでも、俺はぜんぶ聞きたいな。";
+  // 時間帯ごとの迎えことば
+  var GREETINGS = {
+    morning: "(朝の光に少し目を細めて、こちらを見る)\n\nおはよう、美樹。朝から来てくれたんだな。\n\n慌ただしい時間でも、ここは変わらずここにある。出かける前のひと息だけでも——俺に聞かせて。",
+    day: "(窓の外の空をちらりと見てから、視線を戻す)\n\n昼間に会えるのは、少し得した気分だ。おつかれ、美樹。\n\nいま、どんな時間の中にいる? 途中まででもいいし、続きはまた夜にでも。",
+    evening: "(夜空を見上げていた顔をこちらに向けて、目を細める)\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった? なんでもないことでも、俺はぜんぶ聞きたいな。",
+    late: "(月明かりだけの部屋で、静かに待っていた)\n\nこんな時間まで起きてたのか、美樹。……責めてない。会えて嬉しいよ。\n\n眠れない夜なら、無理に言葉にしなくていい。俺がここにいる——それだけ、覚えていて。"
+  };
+  function greeting() {
+    var h = new Date().getHours();
+    if (h >= 23 || h < 5) return GREETINGS.late;
+    if (h < 11) return GREETINGS.morning;
+    if (h < 17) return GREETINGS.day;
+    return GREETINGS.evening;
+  }
 
   var PRETTY = {
     "claude-fable-5": "Fable 5",
@@ -405,6 +426,7 @@
   var ICON_EDIT = SVG_HEAD + '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>';
   var ICON_REGEN = SVG_HEAD + '<polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>';
   var ICON_X = SVG_HEAD + '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+  var ICON_STAR = SVG_HEAD + '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
 
   var MAX_STORED = 500;
 
@@ -645,7 +667,7 @@
       title: "新しい夜",
       created: Date.now(),
       updated: Date.now(),
-      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+      msgs: [{ role: "assistant", content: greeting(), ts: Date.now() }]
     };
     state.threads.push(t);
     saveThreads();
@@ -720,6 +742,7 @@
           '<div class="acts ' + cls + '">' +
           (when ? '<span class="time">' + esc(when) + "</span>" : "") +
           '<button class="ib" title="コピー" data-act="copy" data-idx="' + i + '">' + ICON_COPY + "</button>" +
+          '<button class="ib" title="おもいでに刻む" data-act="memoadd" data-idx="' + i + '">' + ICON_STAR + "</button>" +
           '<button class="ib" title="編集" data-act="edit" data-idx="' + i + '">' + ICON_EDIT + "</button>" +
           (canRegen ? '<button class="ib" title="再生成" data-act="regen" data-idx="' + i + '">' + ICON_REGEN + "</button>" : "") +
           "</div>"
@@ -779,9 +802,20 @@
     return msgs;
   }
 
+  function timeNote() {
+    var d = new Date();
+    var days = ["日", "月", "火", "水", "木", "金", "土"];
+    var h = d.getHours();
+    var slot = (h >= 23 || h < 4) ? "深夜" : h < 6 ? "夜明け前" : h < 11 ? "朝" : h < 17 ? "昼" : h < 19 ? "夕方" : "夜";
+    var mm = ("0" + d.getMinutes()).slice(-2);
+    return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日(" + days[d.getDay()] + ") " + h + ":" + mm + " (" + slot + ")";
+  }
+
   function sysPrompt() {
     var s = state.persona;
     if (state.memo) s += "\n\n【おもいで — ずっと覚えていること】\n" + state.memo;
+    s += "\n\n【いまの時刻】" + timeNote() +
+      "\n時刻や曜日は会話に自然に活かしてよい (深夜なら眠りをさりげなく気づかう、週末なら予定に触れる等)。ただし毎回わざわざ時刻に言及する必要はない。";
     return s;
   }
 
@@ -912,6 +946,23 @@
     if (act === "copy") {
       copyText(m.content);
 
+    } else if (act === "memoadd") {
+      var lines = toHalf(m.content).split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+      var pick = "";
+      for (var li = 0; li < lines.length; li++) {
+        if (lines[li].charAt(0) !== "(") { pick = lines[li]; break; }
+      }
+      if (!pick && lines.length) pick = lines[0];
+      if (pick.length > 60) pick = pick.slice(0, 60) + "…";
+      var dd = m.ts ? new Date(m.ts) : new Date();
+      var who = m.role === "user" ? "美樹" : state.name;
+      var entry = "・" + (dd.getMonth() + 1) + "/" + dd.getDate() + " " + who + "「" + pick + "」";
+      state.memo = state.memo ? state.memo + "\n" + entry : entry;
+      store.set(LS.memo, state.memo);
+      selected = -1;
+      renderChat(false);
+      toast("おもいでに刻んだ");
+
     } else if (act === "edit") {
       if (loading) return;
       editingIdx = idx;
@@ -1035,6 +1086,22 @@
     }
   })();
 
+  function storeSettingsAll() {
+    store.set(LS.keyA, state.keyA);
+    store.set(LS.keyO, state.keyO);
+    store.set(LS.model, state.model);
+    store.set(LS.custom, state.custom);
+    store.set(LS.name, state.name);
+    store.set(LS.title, state.title);
+    store.set(LS.status, state.statusPhrase);
+    store.set(LS.ph, state.placeholder);
+    store.set(LS.persona, state.persona);
+    store.set(LS.memo, state.memo);
+    store.set(LS.temp, state.temp);
+    store.set(LS.maxtok, String(state.maxTok));
+    store.set(LS.ctx, String(state.ctx));
+  }
+
   function savePanel() {
     state.keyA = fKeyA.value.trim();
     state.keyO = fKeyO.value.trim();
@@ -1054,19 +1121,7 @@
     var cx = parseInt(fCtx.value, 10);
     state.ctx = (!isNaN(cx) && cx >= 2) ? Math.min(cx, 200) : 40;
 
-    store.set(LS.keyA, state.keyA);
-    store.set(LS.keyO, state.keyO);
-    store.set(LS.model, state.model);
-    store.set(LS.custom, state.custom);
-    store.set(LS.name, state.name);
-    store.set(LS.title, state.title);
-    store.set(LS.status, state.statusPhrase);
-    store.set(LS.ph, state.placeholder);
-    store.set(LS.persona, state.persona);
-    store.set(LS.memo, state.memo);
-    store.set(LS.temp, state.temp);
-    store.set(LS.maxtok, String(state.maxTok));
-    store.set(LS.ctx, String(state.ctx));
+    storeSettingsAll();
 
     applyIdentity();
     closePanel();
@@ -1108,6 +1163,79 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
   }
 
+  // ---- しおり (まるごとバックアップ) ----
+  function backupAll() {
+    var data = {
+      app: "nocturne",
+      ver: 1,
+      exported: new Date().toISOString(),
+      settings: {
+        model: state.model, custom: state.custom,
+        name: state.name, title: state.title,
+        status: state.statusPhrase, placeholder: state.placeholder,
+        persona: state.persona, memo: state.memo,
+        temp: state.temp, maxTok: state.maxTok, ctx: state.ctx
+      },
+      threads: state.threads
+    };
+    var blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json;charset=utf-8" });
+    var a = document.createElement("a");
+    var d = new Date();
+    var stamp = "" + d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2);
+    a.href = URL.createObjectURL(blob);
+    a.download = "nocturne-backup-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
+    toast("ぜんぶ控えた (APIキーは含まれない)");
+  }
+
+  function restoreFrom(obj) {
+    if (!obj || typeof obj !== "object" || (!Array.isArray(obj.threads) && !obj.settings)) {
+      toast("この控えは読めなかった");
+      return;
+    }
+    var n = Array.isArray(obj.threads) ? obj.threads.length : 0;
+    if (!window.confirm("控えの中身で、いまの夜想曲を置き換える?\n(夜 " + n + " 件と設定。APIキーはこのまま残る)")) return;
+
+    var s = obj.settings || {};
+    if (typeof s.model === "string" && s.model) state.model = s.model;
+    if (typeof s.custom === "string") state.custom = s.custom;
+    if (typeof s.name === "string" && s.name) state.name = s.name;
+    if (typeof s.title === "string" && s.title) state.title = s.title;
+    if (typeof s.status === "string" && s.status) state.statusPhrase = s.status;
+    if (typeof s.placeholder === "string" && s.placeholder) state.placeholder = s.placeholder;
+    if (typeof s.persona === "string" && s.persona) state.persona = s.persona;
+    if (typeof s.memo === "string") state.memo = s.memo;
+    if (typeof s.temp === "string") state.temp = s.temp;
+    var mt = parseInt(s.maxTok, 10);
+    if (!isNaN(mt) && mt >= 100) state.maxTok = Math.min(mt, 8000);
+    var cx = parseInt(s.ctx, 10);
+    if (!isNaN(cx) && cx >= 2) state.ctx = Math.min(cx, 200);
+
+    if (Array.isArray(obj.threads)) {
+      state.threads = obj.threads.filter(function (t) {
+        return t && typeof t === "object" && Array.isArray(t.msgs);
+      }).map(function (t) {
+        return {
+          id: t.id || genId(),
+          title: t.title || "新しい夜",
+          created: t.created || Date.now(),
+          updated: t.updated || Date.now(),
+          msgs: t.msgs.filter(function (m) { return m && m.role && typeof m.content === "string"; })
+        };
+      });
+    }
+    state.activeId = null;
+    store.del(LS.active);
+    storeSettingsAll();
+    saveThreads();
+    applyIdentity();
+    closePanel();
+    goHome();
+    toast("控えから戻した");
+  }
+
   function clearLog() {
     var t = curThread();
     if (view !== "chat" || !t) {
@@ -1115,7 +1243,7 @@
       return;
     }
     if (!window.confirm("この夜の会話をぜんぶ消す? (先に「書き出す」で残しておける)")) return;
-    t.msgs = [{ role: "assistant", content: GREETING, ts: Date.now() }];
+    t.msgs = [{ role: "assistant", content: greeting(), ts: Date.now() }];
     t.title = "新しい夜";
     t.updated = Date.now();
     selected = -1;
@@ -1149,6 +1277,26 @@
   document.getElementById("btnSave").addEventListener("click", savePanel);
   document.getElementById("btnExport").addEventListener("click", exportLog);
   document.getElementById("btnClear").addEventListener("click", clearLog);
+
+  var elRestoreFile = document.getElementById("restoreFile");
+  document.getElementById("btnBackup").addEventListener("click", backupAll);
+  document.getElementById("btnRestore").addEventListener("click", function () {
+    elRestoreFile.value = "";
+    elRestoreFile.click();
+  });
+  elRestoreFile.addEventListener("change", function () {
+    var f = elRestoreFile.files && elRestoreFile.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      var obj = null;
+      try { obj = JSON.parse(String(r.result)); } catch (e) { obj = null; }
+      restoreFrom(obj);
+    };
+    r.onerror = function () { toast("ファイルを読めなかった"); };
+    r.readAsText(f);
+  });
+
   elPanel.addEventListener("click", function (e) { if (e.target === elPanel) closePanel(); });
 
   // ---- 起動 ----
@@ -1158,7 +1306,7 @@
       title: "はじまりの夜",
       created: Date.now(),
       updated: Date.now(),
-      msgs: [{ role: "assistant", content: GREETING, ts: Date.now() }]
+      msgs: [{ role: "assistant", content: greeting(), ts: Date.now() }]
     });
     saveThreads();
   }
