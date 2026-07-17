@@ -324,15 +324,12 @@
 
     </div>
 
-    <div class="note">APIキーはこの端末のブラウザの中 (localStorage) にだけ保存される。送信先は Anthropic / OpenAI の公式APIのみ。端末やこのファイルを人と共有するときだけ気をつけて。</div>
-
     <div class="btnrow">
       <button id="btnSave" class="btn quiet">保存して閉じる</button>
       <button id="btnExport" class="btn quiet">書き出す</button>
-      <button id="btnClear" class="btn quiet">この夜の会話を消す</button>
     </div>
 
-    <h3>しおり — 夜を失くさないために</h3>
+    <h3>栞 — 夜を失くさないために</h3>
     <div class="note">iPhoneのSafariは、しばらく開かなかったサイトの保存データ (会話も設定も) を静かに消してしまうことがある。ときどき「まるごと控える」でファイルに残して、iCloud Driveなどに置いておいて。何かあっても「控えから戻す」で、夜も設定もぜんぶよみがえる。ホーム画面に追加して使うと、そもそも消えにくくなる。</div>
     <div class="btnrow">
       <button id="btnBackup" class="btn quiet">まるごと控える</button>
@@ -1163,7 +1160,7 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 500);
   }
 
-  // ---- しおり (まるごとバックアップ) ----
+  // ---- 栞 (まるごとバックアップ) ----
   function backupAll() {
     var data = {
       app: "nocturne",
@@ -1236,23 +1233,6 @@
     toast("控えから戻した");
   }
 
-  function clearLog() {
-    var t = curThread();
-    if (view !== "chat" || !t) {
-      toast("消したい夜は、ホームの各カードの × から");
-      return;
-    }
-    if (!window.confirm("この夜の会話をぜんぶ消す? (先に「書き出す」で残しておける)")) return;
-    t.msgs = [{ role: "assistant", content: greeting(), ts: Date.now() }];
-    t.title = "新しい夜";
-    t.updated = Date.now();
-    selected = -1;
-    editingIdx = -1;
-    saveThreads();
-    renderChat(true);
-    closePanel();
-  }
-
   // ---- 入力欄 ----
   function autosize() {
     elBox.style.height = "auto";
@@ -1276,7 +1256,6 @@
   document.getElementById("btnSettings").addEventListener("click", openPanel);
   document.getElementById("btnSave").addEventListener("click", savePanel);
   document.getElementById("btnExport").addEventListener("click", exportLog);
-  document.getElementById("btnClear").addEventListener("click", clearLog);
 
   var elRestoreFile = document.getElementById("restoreFile");
   document.getElementById("btnBackup").addEventListener("click", backupAll);
