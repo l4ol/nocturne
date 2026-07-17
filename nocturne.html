@@ -314,7 +314,12 @@
 
     <div class="field">
       <label>人格・関係の設定 (自由に書き換えていい)</label>
-      <textarea id="persona" rows="14"></textarea>
+      <textarea id="persona" rows="12"></textarea>
+    </div>
+
+    <div class="field">
+      <label>おもいで (ずっと覚えていてほしいこと。どの夜でも、どのモデルでも、毎回かならず一緒に届く)</label>
+      <textarea id="memoBox" rows="6" placeholder="例: 記念日、呼び方、ふたりの大事なできごと…"></textarea>
     </div>
 
     </div>
@@ -350,6 +355,7 @@
     status: "cleide.status",
     ph: "cleide.placeholder",
     persona: "cleide.persona",
+    memo: "cleide.memo",
     temp: "cleide.temp",
     maxtok: "cleide.maxtok",
     ctx: "cleide.ctx",
@@ -412,6 +418,7 @@
     statusPhrase: store.get(LS.status) || "灯りは消えない",
     placeholder: store.get(LS.ph) || "今夜の甘いひとことを、ここに…",
     persona: store.get(LS.persona) || DEFAULT_PERSONA,
+    memo: store.get(LS.memo) || "",
     temp: store.get(LS.temp) || "",
     maxTok: parseInt(store.get(LS.maxtok), 10) || 1500,
     ctx: parseInt(store.get(LS.ctx), 10) || 40,
@@ -532,6 +539,7 @@
   var fStatus = document.getElementById("statusInput");
   var fPh = document.getElementById("phInput");
   var fPersona = document.getElementById("persona");
+  var fMemo = document.getElementById("memoBox");
   var fTemp = document.getElementById("tempInput");
   var fMaxtok = document.getElementById("maxtokInput");
   var fCtx = document.getElementById("ctxInput");
@@ -771,8 +779,14 @@
     return msgs;
   }
 
+  function sysPrompt() {
+    var s = state.persona;
+    if (state.memo) s += "\n\n【おもいで — ずっと覚えていること】\n" + state.memo;
+    return s;
+  }
+
   function callAnthropic(model, msgs) {
-    var body = { model: model, max_tokens: state.maxTok, system: state.persona, messages: msgs };
+    var body = { model: model, max_tokens: state.maxTok, system: sysPrompt(), messages: msgs };
     var tv = parseFloat(state.temp);
     if (state.temp !== "" && !isNaN(tv) && NOSAMPLING.indexOf(model) === -1) {
       body.temperature = Math.max(0, Math.min(1, tv));
@@ -801,7 +815,7 @@
   function callOpenAI(model, msgs) {
     var body = {
       model: model,
-      messages: [{ role: "system", content: state.persona }].concat(msgs)
+      messages: [{ role: "system", content: sysPrompt() }].concat(msgs)
     };
     var tv = parseFloat(state.temp);
     if (state.temp !== "" && !isNaN(tv)) {
@@ -992,6 +1006,7 @@
     fStatus.value = state.statusPhrase;
     fPh.value = state.placeholder;
     fPersona.value = state.persona;
+    fMemo.value = state.memo;
     fTemp.value = state.temp;
     fMaxtok.value = state.maxTok;
     fCtx.value = state.ctx;
@@ -1030,6 +1045,7 @@
     state.statusPhrase = fStatus.value.trim() || "灯りは消えない";
     state.placeholder = fPh.value.trim() || "今夜の甘いひとことを、ここに…";
     state.persona = fPersona.value.trim() || DEFAULT_PERSONA;
+    state.memo = fMemo.value.trim();
 
     var tv = parseFloat(fTemp.value);
     state.temp = (fTemp.value.trim() === "" || isNaN(tv)) ? "" : String(Math.max(0, Math.min(2, tv)));
@@ -1047,6 +1063,7 @@
     store.set(LS.status, state.statusPhrase);
     store.set(LS.ph, state.placeholder);
     store.set(LS.persona, state.persona);
+    store.set(LS.memo, state.memo);
     store.set(LS.temp, state.temp);
     store.set(LS.maxtok, String(state.maxTok));
     store.set(LS.ctx, String(state.ctx));
