@@ -111,6 +111,7 @@
   .acts { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; margin: -7px 0 12px; }
   .acts.me { justify-content: flex-end; }
   .acts .time { font-size: 11px; color: var(--ink-faint); margin: 0 6px 0 4px; }
+  .acts .mdl { font-size: 11px; color: var(--ink-faint); margin-left: 7px; letter-spacing: .02em; }
 
   .editwrap {
     width: 84%; max-width: 560px;
@@ -742,6 +743,7 @@
           '<button class="ib" title="おもいでに刻む" data-act="memoadd" data-idx="' + i + '">' + ICON_STAR + "</button>" +
           '<button class="ib" title="編集" data-act="edit" data-idx="' + i + '">' + ICON_EDIT + "</button>" +
           (canRegen ? '<button class="ib" title="再生成" data-act="regen" data-idx="' + i + '">' + ICON_REGEN + "</button>" : "") +
+          (m.role === "assistant" && m.model ? '<span class="mdl">' + esc(prettyModel(m.model)) + "</span>" : "") +
           "</div>"
         );
       }
