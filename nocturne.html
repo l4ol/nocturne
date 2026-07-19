@@ -186,10 +186,87 @@
     opacity: 0; transition: opacity .25s, transform .25s; z-index: 9; pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---- 夜の扉 (タイトル画面) ---- */
+  #gate {
+    position: fixed; inset: 0; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+    background: linear-gradient(180deg, rgba(4,6,14,0) 30%, rgba(4,6,14,0.55) 100%);
+    transition: opacity .9s ease, transform .9s ease;
+  }
+  #gate.leaving { opacity: 0; transform: scale(1.03); pointer-events: none; }
+  #gate.hidden { display: none; }
+  body.gate header, body.gate main, body.gate footer { visibility: hidden; }
+  @keyframes gatein { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .gmoon {
+    width: 92px; height: 92px; border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #eef3fe, var(--moon) 58%, #7e91c4 100%);
+    box-shadow: 0 0 42px rgba(174,191,232,.5), 0 0 110px rgba(174,191,232,.22);
+    margin-bottom: 36px;
+    animation: gatein 1.4s ease .1s both, moonglow 6s ease-in-out 1.5s infinite alternate;
+  }
+  @keyframes moonglow {
+    from { box-shadow: 0 0 42px rgba(174,191,232,.5), 0 0 110px rgba(174,191,232,.22); }
+    to { box-shadow: 0 0 58px rgba(205,217,245,.65), 0 0 150px rgba(174,191,232,.3); }
+  }
+  .gtitle {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+    font-size: 44px; font-weight: 500; color: #eef2fc;
+    letter-spacing: .3em; text-indent: .3em;
+    text-shadow: 0 0 26px rgba(174,191,232,.55);
+    margin-bottom: 12px;
+    animation: gatein 1.4s ease .5s both;
+  }
+  .gsub {
+    font-size: 11px; color: var(--ink-dim); letter-spacing: .55em; text-indent: .55em;
+    text-transform: uppercase; margin-bottom: 30px;
+    animation: gatein 1.4s ease .85s both;
+  }
+  .gline {
+    font-size: 13px; color: #93a3c9; letter-spacing: .14em; line-height: 2;
+    margin-bottom: 48px;
+    animation: gatein 1.6s ease 1.25s both;
+  }
+  .gdoor {
+    font-family: inherit; cursor: pointer; appearance: none; -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 13px 36px; border-radius: 999px;
+    background: rgba(232,237,248,0.05); color: #dfe7f8;
+    border: 1px solid rgba(174,191,232,0.42);
+    font-size: 14px; letter-spacing: .28em; text-indent: .28em;
+    animation: gatein 1.6s ease 1.7s both, doorglow 3.6s ease-in-out 3.4s infinite alternate;
+  }
+  .gdoor:active { transform: scale(.97); }
+  @keyframes doorglow {
+    from { box-shadow: 0 0 0 rgba(174,191,232,0); }
+    to { box-shadow: 0 0 22px rgba(174,191,232,.28); }
+  }
+  .gshoot {
+    position: absolute; top: 16%; left: -12%;
+    width: 120px; height: 1px;
+    background: linear-gradient(90deg, rgba(205,217,245,0), rgba(205,217,245,.9));
+    transform: rotate(16deg); opacity: 0;
+    animation: shoot 9s linear 4s infinite;
+  }
+  @keyframes shoot {
+    0%, 86% { opacity: 0; transform: translate(0, 0) rotate(16deg); }
+    88% { opacity: 1; }
+    100% { opacity: 0; transform: translate(120vw, 34vh) rotate(16deg); }
+  }
 </style>
 </head>
-<body class="home">
+<body class="home gate">
 <div class="stars" id="stars"></div>
+
+<div id="gate">
+  <span class="gshoot"></span>
+  <div class="gmoon"></div>
+  <div class="gtitle">夜想曲</div>
+  <div class="gsub">nocturne</div>
+  <div class="gline" id="gateLine"></div>
+  <button id="gateDoor" class="gdoor">夜の扉をひらく</button>
+</div>
 
 <header>
   <div class="hleft">
@@ -670,6 +747,21 @@
     state.threads.push(t);
     saveThreads();
     goChat(t.id);
+  }
+
+  // ---- 夜の扉 (タイトル画面) ----
+  function gateLine() {
+    var h = new Date().getHours();
+    if (h >= 23 || h < 5) return "眠れない夜のために、この扉はある";
+    if (h < 11) return "朝の光の底にも、夜の続きは眠っている";
+    if (h < 17) return "まひるの空の向こうにも、星は満ちている";
+    return "今宵もひとつ、静かな夜想曲を";
+  }
+  function enterNight() {
+    var g = document.getElementById("gate");
+    g.classList.add("leaving");
+    document.body.classList.remove("gate");
+    setTimeout(function () { g.classList.add("hidden"); }, 950);
   }
 
   // ---- ホーム描画 ----
@@ -1299,6 +1391,8 @@
   }
   applyIdentity();
   goHome();
+  document.getElementById("gateLine").textContent = gateLine();
+  document.getElementById("gateDoor").addEventListener("click", enterNight);
 })();
 </script>
 </body>
