@@ -254,6 +254,24 @@
     88% { opacity: 1; }
     100% { opacity: 0; transform: translate(120vw, 34vh) rotate(16deg); }
   }
+
+  /* ---- 夜の問いかけ (確認ダイアログ) ---- */
+  #ask {
+    position: fixed; inset: 0; z-index: 7;
+    background: rgba(4,6,14,0.72); backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center; padding: 24px;
+  }
+  #ask.hidden { display: none; }
+  .askcard {
+    width: 100%; max-width: 400px; background: #0d1428;
+    border: 1px solid rgba(205,217,245,0.18); border-radius: 18px;
+    padding: 22px 20px 18px;
+    box-shadow: 0 0 44px rgba(174,191,232,0.12);
+    animation: askin .22s ease both;
+  }
+  @keyframes askin { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  .askmsg { font-size: 14px; line-height: 1.9; color: var(--ink); white-space: pre-line; letter-spacing: .02em; margin-bottom: 18px; }
+  .askrow { display: flex; gap: 8px; justify-content: flex-end; }
 </style>
 </head>
 <body class="home gate">
@@ -414,6 +432,16 @@
       <button id="btnRestore" class="btn quiet">控えから戻す</button>
     </div>
     <input type="file" id="restoreFile" accept=".json,application/json" style="display:none">
+  </div>
+</div>
+
+<div id="ask" class="hidden">
+  <div class="askcard">
+    <div class="askmsg" id="askMsg"></div>
+    <div class="askrow">
+      <button id="askNo" class="btn ghost">やめておく</button>
+      <button id="askYes" class="btn ghost">はい</button>
+    </div>
   </div>
 </div>
 
@@ -764,6 +792,28 @@
     setTimeout(function () { g.classList.add("hidden"); }, 950);
   }
 
+  // ---- 夜の問いかけ (confirmの夜色版) ----
+  var elAsk = document.getElementById("ask");
+  var elAskMsg = document.getElementById("askMsg");
+  var elAskYes = document.getElementById("askYes");
+  var askCb = null;
+  function nightConfirm(msg, yesLabel, danger, cb) {
+    elAskMsg.textContent = msg;
+    elAskYes.textContent = yesLabel || "はい";
+    if (danger) elAskYes.classList.add("danger");
+    else elAskYes.classList.remove("danger");
+    askCb = cb;
+    elAsk.classList.remove("hidden");
+  }
+  function closeAsk() { elAsk.classList.add("hidden"); askCb = null; }
+  document.getElementById("askNo").addEventListener("click", closeAsk);
+  elAskYes.addEventListener("click", function () {
+    var f = askCb;
+    closeAsk();
+    if (f) f();
+  });
+  elAsk.addEventListener("click", function (e) { if (e.target === elAsk) closeAsk(); });
+
   // ---- ホーム描画 ----
   function renderHome() {
     var sorted = state.threads.slice().sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
@@ -1103,12 +1153,12 @@
     var del = e.target.closest ? e.target.closest("[data-delthread]") : null;
     if (del) {
       var did = del.getAttribute("data-delthread");
-      if (window.confirm("この夜をまるごと消す? (設定の「書き出す」で残してからでも遅くないよ)")) {
+      nightConfirm("この夜をまるごと消す?\n(設定の「書き出す」で残してからでも遅くないよ)", "消す", true, function () {
         state.threads = state.threads.filter(function (t) { return t.id !== did; });
         if (state.activeId === did) state.activeId = null;
         saveThreads();
         renderHome();
-      }
+      });
       return;
     }
     // 新しい夜
@@ -1287,8 +1337,12 @@
       return;
     }
     var n = Array.isArray(obj.threads) ? obj.threads.length : 0;
-    if (!window.confirm("控えの中身で、いまの夜想曲を置き換える?\n(夜 " + n + " 件と設定。APIキーはこのまま残る)")) return;
+    nightConfirm("控えの中身で、いまの夜想曲を置き換える?\n(夜 " + n + " 件と設定。APIキーはこのまま残る)", "置き換える", false, function () {
+      applyRestore(obj);
+    });
+  }
 
+  function applyRestore(obj) {
     var s = obj.settings || {};
     if (typeof s.model === "string" && s.model) state.model = s.model;
     if (typeof s.custom === "string") state.custom = s.custom;
