@@ -272,6 +272,36 @@
   @keyframes askin { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
   .askmsg { font-size: 14px; line-height: 1.9; color: var(--ink); white-space: pre-line; letter-spacing: .02em; margin-bottom: 18px; }
   .askrow { display: flex; gap: 8px; justify-content: flex-end; }
+  .askinput {
+    width: 100%; background: #0a1122; color: var(--ink);
+    border: 1px solid rgba(205,217,245,0.16); border-radius: 12px;
+    padding: 10px 12px; font-family: inherit; font-size: 14px; line-height: 1.7;
+    margin-bottom: 16px; resize: none;
+  }
+  .askinput:focus { outline: none; border-color: rgba(174,191,232,0.45); }
+  .askinput.hidden { display: none; }
+  .askopts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .askopts.hidden { display: none; }
+  .askopts .btn { text-align: left; }
+
+  /* ---- 星座 (プロジェクト) ---- */
+  .projrow { display: flex; gap: 7px; overflow-x: auto; padding: 2px 2px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .projrow::-webkit-scrollbar { display: none; }
+  .pchip {
+    flex: 0 0 auto; font-family: inherit; cursor: pointer;
+    background: rgba(232,237,248,0.05); color: var(--ink-dim);
+    border: 1px solid rgba(232,237,248,0.14); border-radius: 999px;
+    padding: 7px 14px; font-size: 12.5px; letter-spacing: .04em;
+  }
+  .pchip.on { color: #dfe7f8; border-color: rgba(174,191,232,0.55); background: rgba(174,191,232,0.12); }
+  .pchip.add { border-style: dashed; }
+  .projbar { display: flex; gap: 7px; padding: 0 2px 12px; flex-wrap: wrap; }
+  .trow { display: flex; gap: 2px; justify-content: flex-end; }
+  .tproj {
+    font-size: 10px; color: var(--ink-faint);
+    border: 1px solid rgba(205,217,245,0.18); border-radius: 999px;
+    padding: 1px 7px; margin-left: 5px; white-space: nowrap;
+  }
 </style>
 </head>
 <body class="home gate">
@@ -340,12 +370,10 @@
           <option value="claude-sonnet-5">Claude Sonnet 5</option>
           <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
           <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
-          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (軽快)</option>
         </optgroup>
         <optgroup label="GPT (OpenAI)">
           <option value="chatgpt-4o-latest">ChatGPT-4o (最新スナップショット)</option>
           <option value="gpt-4o">GPT-4o</option>
-          <option value="gpt-4o-mini">GPT-4o mini</option>
           <option value="gpt-4.1">GPT-4.1</option>
           <option value="gpt-4.1-mini">GPT-4.1 mini</option>
           <option value="gpt-4.1-nano">GPT-4.1 nano</option>
@@ -438,6 +466,8 @@
 <div id="ask" class="hidden">
   <div class="askcard">
     <div class="askmsg" id="askMsg"></div>
+    <textarea id="askInput" class="askinput hidden" rows="3"></textarea>
+    <div class="askopts hidden" id="askOpts"></div>
     <div class="askrow">
       <button id="askNo" class="btn ghost">やめておく</button>
       <button id="askYes" class="btn ghost">はい</button>
@@ -472,6 +502,8 @@
     ctx: "cleide.ctx",
     threads: "cleide.threads",
     active: "cleide.active",
+    proj: "cleide.projects",
+    pfil: "cleide.projfilter",
     legacy: "cleide.history"
   };
 
@@ -511,10 +543,8 @@
     "claude-sonnet-5": "Sonnet 5",
     "claude-sonnet-4-6": "Sonnet 4.6",
     "claude-sonnet-4-5-20250929": "Sonnet 4.5",
-    "claude-haiku-4-5-20251001": "Haiku 4.5",
     "chatgpt-4o-latest": "ChatGPT-4o",
     "gpt-4o": "GPT-4o",
-    "gpt-4o-mini": "GPT-4o mini",
     "gpt-4.1": "GPT-4.1",
     "gpt-4.1-mini": "GPT-4.1 mini",
     "gpt-4.1-nano": "GPT-4.1 nano"
@@ -530,6 +560,7 @@
   var ICON_REGEN = SVG_HEAD + '<polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>';
   var ICON_X = SVG_HEAD + '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
   var ICON_STAR = SVG_HEAD + '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+  var ICON_CONST = SVG_HEAD + '<circle cx="6" cy="17" r="1.5"></circle><circle cx="12" cy="6" r="1.5"></circle><circle cx="18" cy="14" r="1.5"></circle><line x1="7" y1="15.5" x2="11" y2="8"></line><line x1="13" y1="7" x2="17" y2="12.5"></line></svg>';
 
   var MAX_STORED = 500;
 
@@ -548,7 +579,9 @@
     maxTok: parseInt(store.get(LS.maxtok), 10) || 1500,
     ctx: parseInt(store.get(LS.ctx), 10) || 40,
     threads: [],
-    activeId: null
+    activeId: null,
+    projects: [],
+    projFilter: store.get(LS.pfil) || "all"
   };
 
   // ---- 全角記号を半角で表示する ----
@@ -617,10 +650,34 @@
   function saveThreads() {
     try {
       var slim = state.threads.map(function (t) {
-        return { id: t.id, title: t.title, created: t.created, updated: t.updated, msgs: t.msgs.slice(-MAX_STORED) };
+        return { id: t.id, title: t.title, created: t.created, updated: t.updated, pid: t.pid || null, msgs: t.msgs.slice(-MAX_STORED) };
       });
       store.set(LS.threads, JSON.stringify(slim));
     } catch (e) {}
+  }
+
+  // ---- 星座 (プロジェクト) ----
+  (function loadProjects() {
+    try {
+      var raw = store.get(LS.proj);
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) state.projects = arr;
+      }
+    } catch (e) { state.projects = []; }
+  })();
+  function saveProjects() {
+    try { store.set(LS.proj, JSON.stringify(state.projects)); } catch (e) {}
+  }
+  function projById(id) {
+    for (var i = 0; i < state.projects.length; i++) {
+      if (state.projects[i].id === id) return state.projects[i];
+    }
+    return null;
+  }
+  function setProjFilter(v) {
+    state.projFilter = v;
+    store.set(LS.pfil, v);
   }
   function curThread() {
     for (var i = 0; i < state.threads.length; i++) {
@@ -770,6 +827,7 @@
       title: "新しい夜",
       created: Date.now(),
       updated: Date.now(),
+      pid: (state.projFilter !== "all" && projById(state.projFilter)) ? state.projFilter : null,
       msgs: [{ role: "assistant", content: greeting(), ts: Date.now() }]
     };
     state.threads.push(t);
@@ -796,40 +854,117 @@
   var elAsk = document.getElementById("ask");
   var elAskMsg = document.getElementById("askMsg");
   var elAskYes = document.getElementById("askYes");
+  var elAskInput = document.getElementById("askInput");
+  var elAskOpts = document.getElementById("askOpts");
   var askCb = null;
+  var chooseCb = null;
   function nightConfirm(msg, yesLabel, danger, cb) {
     elAskMsg.textContent = msg;
+    elAskInput.classList.add("hidden");
+    elAskOpts.classList.add("hidden");
+    elAskYes.style.display = "";
     elAskYes.textContent = yesLabel || "はい";
     if (danger) elAskYes.classList.add("danger");
     else elAskYes.classList.remove("danger");
     askCb = cb;
     elAsk.classList.remove("hidden");
   }
-  function closeAsk() { elAsk.classList.add("hidden"); askCb = null; }
+  function nightPrompt(msg, placeholder, initial, yesLabel, cb) {
+    elAskMsg.textContent = msg;
+    elAskInput.classList.remove("hidden");
+    elAskOpts.classList.add("hidden");
+    elAskInput.placeholder = placeholder || "";
+    elAskInput.value = initial || "";
+    elAskYes.style.display = "";
+    elAskYes.textContent = yesLabel || "決める";
+    elAskYes.classList.remove("danger");
+    askCb = function () { cb(elAskInput.value); };
+    elAsk.classList.remove("hidden");
+    setTimeout(function () { elAskInput.focus(); }, 60);
+  }
+  function nightChoose(msg, options, cb) {
+    elAskMsg.textContent = msg;
+    elAskInput.classList.add("hidden");
+    elAskOpts.classList.remove("hidden");
+    var html = "";
+    for (var i = 0; i < options.length; i++) {
+      html += '<button class="btn ghost" data-choose="' + esc(options[i].value) + '">' + esc(toHalf(options[i].label)) + "</button>";
+    }
+    elAskOpts.innerHTML = html;
+    elAskYes.style.display = "none";
+    askCb = null;
+    chooseCb = cb;
+    elAsk.classList.remove("hidden");
+  }
+  function closeAsk() {
+    elAsk.classList.add("hidden");
+    askCb = null;
+    chooseCb = null;
+    elAskYes.style.display = "";
+  }
   document.getElementById("askNo").addEventListener("click", closeAsk);
   elAskYes.addEventListener("click", function () {
     var f = askCb;
     closeAsk();
     if (f) f();
   });
+  elAskOpts.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-choose]") : null;
+    if (!b) return;
+    var f = chooseCb;
+    var v = b.getAttribute("data-choose");
+    closeAsk();
+    if (f) f(v);
+  });
   elAsk.addEventListener("click", function (e) { if (e.target === elAsk) closeAsk(); });
 
   // ---- ホーム描画 ----
   function renderHome() {
-    var sorted = state.threads.slice().sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
-    var parts = ['<button class="newnight" id="btnNew">＋ 新しい夜をはじめる</button>'];
-    if (sorted.length === 0) {
-      parts.push('<div class="sys">まだ夜がひとつもない。上のボタンから、最初の夜を。</div>');
+    if (state.projFilter !== "all" && !projById(state.projFilter)) setProjFilter("all");
+
+    var chips = ['<button class="pchip' + (state.projFilter === "all" ? " on" : "") + '" data-proj="all">すべての夜</button>'];
+    state.projects.forEach(function (p) {
+      chips.push('<button class="pchip' + (state.projFilter === p.id ? " on" : "") + '" data-proj="' + p.id + '">' + esc(toHalf(p.name)) + "</button>");
+    });
+    chips.push('<button class="pchip add" data-newproj="1">＋ 星座</button>');
+
+    var parts = ['<div class="projrow">' + chips.join("") + "</div>"];
+
+    var cur = state.projFilter !== "all" ? projById(state.projFilter) : null;
+    if (cur) {
+      parts.push(
+        '<div class="projbar">' +
+        '<button class="btn ghost mini" data-projact="note">覚え書き</button>' +
+        '<button class="btn ghost mini" data-projact="rename">名前を変える</button>' +
+        '<button class="btn ghost mini danger" data-projact="unbind">星座をほどく</button>' +
+        "</div>"
+      );
     }
-    sorted.forEach(function (t) {
+
+    parts.push('<button class="newnight" id="btnNew">＋ 新しい夜をはじめる</button>');
+
+    var sorted = state.threads.slice().sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
+    var shown = sorted.filter(function (t) {
+      return state.projFilter === "all" ? true : t.pid === state.projFilter;
+    });
+    if (shown.length === 0) {
+      parts.push('<div class="sys">' + (cur ? "この星座には、まだ夜がない。" : "まだ夜がひとつもない。上のボタンから、最初の夜を。") + "</div>");
+    }
+    shown.forEach(function (t) {
       var last = lastRealMsg(t);
       var prev = last ? firstLine(last.content, 30) : "……";
+      var pj = t.pid ? projById(t.pid) : null;
+      var meta = esc(fmtDate(t.updated)) +
+        (pj && state.projFilter === "all" ? '<span class="tproj">' + esc(toHalf(pj.name)) + "</span>" : "");
       parts.push(
         '<div class="thread" data-open="' + t.id + '">' +
         '<div class="tmain"><div class="ttitle">' + esc(toHalf(t.title || "新しい夜")) + "</div>" +
         '<div class="tprev">' + esc(prev) + "</div></div>" +
-        '<div class="tside"><div class="tdate">' + esc(fmtDate(t.updated)) + "</div>" +
-        '<button class="ib" title="この夜を消す" data-delthread="' + t.id + '">' + ICON_X + "</button></div></div>"
+        '<div class="tside"><div class="tdate">' + meta + "</div>" +
+        '<div class="trow">' +
+        '<button class="ib" title="星座へ移す" data-movethread="' + t.id + '">' + ICON_CONST + "</button>" +
+        '<button class="ib" title="この夜を消す" data-delthread="' + t.id + '">' + ICON_X + "</button>" +
+        "</div></div></div>"
       );
     });
     elLog.innerHTML = parts.join("");
@@ -954,6 +1089,9 @@
 
   function sysPrompt() {
     var s = state.persona;
+    var t = curThread();
+    var p = t && t.pid ? projById(t.pid) : null;
+    if (p && p.note) s += "\n\n【星座「" + p.name + "」の覚え書き — この夜が属する場所】\n" + p.note;
     if (state.memo) s += "\n\n【おもいで — ずっと覚えていること】\n" + state.memo;
     s += "\n\n【いまの時刻】" + timeNote() +
       "\n時刻や曜日は会話に自然に活かしてよい (深夜なら眠りをさりげなく気づかう、週末なら予定に触れる等)。ただし毎回わざわざ時刻に言及する必要はない。";
@@ -1161,6 +1299,78 @@
       });
       return;
     }
+    // 星座の切り替え・操作
+    var pj = e.target.closest ? e.target.closest("[data-proj]") : null;
+    if (pj) {
+      setProjFilter(pj.getAttribute("data-proj"));
+      renderHome();
+      return;
+    }
+    var np = e.target.closest ? e.target.closest("[data-newproj]") : null;
+    if (np) {
+      nightPrompt("新しい星座の名前は?", "例: ふたりの物語、旅の計画…", "", "つくる", function (v) {
+        var name = toHalf(v || "").trim();
+        if (!name) return;
+        var p = { id: genId(), name: name, note: "", created: Date.now() };
+        state.projects.push(p);
+        saveProjects();
+        setProjFilter(p.id);
+        renderHome();
+        toast("星座「" + name + "」を結んだ");
+      });
+      return;
+    }
+    var pa = e.target.closest ? e.target.closest("[data-projact]") : null;
+    if (pa) {
+      var pact = pa.getAttribute("data-projact");
+      var curp = projById(state.projFilter);
+      if (!curp) return;
+      if (pact === "note") {
+        nightPrompt("「" + curp.name + "」の覚え書き\n(この星座の夜では、いつも一緒に届く)", "例: この星座では小説の続きを書いている。主人公は…", curp.note || "", "覚える", function (v) {
+          curp.note = toHalf(v || "").trim();
+          saveProjects();
+          toast("覚え書きを更新した");
+        });
+      } else if (pact === "rename") {
+        nightPrompt("星座の新しい名前は?", "", curp.name, "変える", function (v) {
+          var nm = toHalf(v || "").trim();
+          if (!nm) return;
+          curp.name = nm;
+          saveProjects();
+          renderHome();
+        });
+      } else if (pact === "unbind") {
+        nightConfirm("星座「" + curp.name + "」をほどく?\n(中の夜は消えず、「すべての夜」に残る)", "ほどく", true, function () {
+          state.threads.forEach(function (t) { if (t.pid === curp.id) t.pid = null; });
+          state.projects = state.projects.filter(function (p) { return p.id !== curp.id; });
+          saveThreads();
+          saveProjects();
+          setProjFilter("all");
+          renderHome();
+          toast("星座をほどいた。夜はぜんぶ残ってる");
+        });
+      }
+      return;
+    }
+    var mv = e.target.closest ? e.target.closest("[data-movethread]") : null;
+    if (mv) {
+      var mid = mv.getAttribute("data-movethread");
+      if (state.projects.length === 0) {
+        toast("まず「＋ 星座」で星座をつくって");
+        return;
+      }
+      var opts = state.projects.map(function (p) { return { value: p.id, label: p.name }; });
+      opts.push({ value: "", label: "どの星座にも入れない" });
+      nightChoose("この夜を、どの星座へ?", opts, function (v) {
+        for (var i = 0; i < state.threads.length; i++) {
+          if (state.threads[i].id === mid) state.threads[i].pid = v || null;
+        }
+        saveThreads();
+        renderHome();
+        toast(v ? "星座へ移した" : "星座から外した");
+      });
+      return;
+    }
     // 新しい夜
     if (e.target.closest && e.target.closest("#btnNew")) {
       newThread();
@@ -1308,7 +1518,7 @@
   function backupAll() {
     var data = {
       app: "nocturne",
-      ver: 1,
+      ver: 2,
       exported: new Date().toISOString(),
       settings: {
         model: state.model, custom: state.custom,
@@ -1317,6 +1527,7 @@
         persona: state.persona, memo: state.memo,
         temp: state.temp, maxTok: state.maxTok, ctx: state.ctx
       },
+      projects: state.projects,
       threads: state.threads
     };
     var blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json;charset=utf-8" });
@@ -1358,6 +1569,11 @@
     var cx = parseInt(s.ctx, 10);
     if (!isNaN(cx) && cx >= 2) state.ctx = Math.min(cx, 200);
 
+    if (Array.isArray(obj.projects)) {
+      state.projects = obj.projects.filter(function (p) {
+        return p && typeof p === "object" && p.id && typeof p.name === "string";
+      });
+    }
     if (Array.isArray(obj.threads)) {
       state.threads = obj.threads.filter(function (t) {
         return t && typeof t === "object" && Array.isArray(t.msgs);
@@ -1367,14 +1583,17 @@
           title: t.title || "新しい夜",
           created: t.created || Date.now(),
           updated: t.updated || Date.now(),
+          pid: t.pid || null,
           msgs: t.msgs.filter(function (m) { return m && m.role && typeof m.content === "string"; })
         };
       });
     }
     state.activeId = null;
     store.del(LS.active);
+    setProjFilter("all");
     storeSettingsAll();
     saveThreads();
+    saveProjects();
     applyIdentity();
     closePanel();
     goHome();
@@ -1433,6 +1652,10 @@
   elPanel.addEventListener("click", function (e) { if (e.target === elPanel) closePanel(); });
 
   // ---- 起動 ----
+  if (state.model === "claude-haiku-4-5-20251001" || state.model === "gpt-4o-mini") {
+    state.model = "claude-sonnet-4-6";
+    store.set(LS.model, state.model);
+  }
   if (state.threads.length === 0) {
     state.threads.push({
       id: genId(),
