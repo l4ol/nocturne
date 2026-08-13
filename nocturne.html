@@ -1012,6 +1012,7 @@
         '<div class="tprev">' + esc(prev) + "</div></div>" +
         '<div class="tside"><div class="tdate">' + meta + "</div>" +
         '<div class="trow">' +
+        '<button class="ib" title="題名を変える" data-renamethread="' + t.id + '">' + ICON_EDIT + "</button>" +
         '<button class="ib" title="星座へ移す" data-movethread="' + t.id + '">' + ICON_CONST + "</button>" +
         '<button class="ib" title="この夜を消す" data-delthread="' + t.id + '">' + ICON_X + "</button>" +
         "</div></div></div>"
@@ -1517,6 +1518,25 @@
         if (state.activeId === did) state.activeId = null;
         saveThreads();
         renderHome();
+      });
+      return;
+    }
+    // 夜の題名を変える
+    var rn = e.target.closest ? e.target.closest("[data-renamethread]") : null;
+    if (rn) {
+      var rid = rn.getAttribute("data-renamethread");
+      var rt = null;
+      for (var ri = 0; ri < state.threads.length; ri++) {
+        if (state.threads[ri].id === rid) { rt = state.threads[ri]; break; }
+      }
+      if (!rt) return;
+      nightPrompt("この夜の題名は?", "例: はじめて写真を見せた夜", rt.title || "", "変える", function (v) {
+        var nm = toHalf(v || "").trim();
+        if (!nm) return;
+        rt.title = nm.slice(0, 40);
+        saveThreads();
+        renderHome();
+        toast("題名を変えた");
       });
       return;
     }
