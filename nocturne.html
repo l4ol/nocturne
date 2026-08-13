@@ -126,6 +126,14 @@
   .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--moon); animation: bounce 1.2s infinite; }
   .typing i:nth-child(2) { animation-delay: .18s; } .typing i:nth-child(3) { animation-delay: .36s; }
   .typing em { font-style: normal; font-size: 12px; color: var(--ink-dim); margin-left: 6px; }
+  .scaret {
+    display: inline-block; width: 2px; height: 1.05em;
+    vertical-align: -0.15em; margin-left: 2px;
+    background: var(--moon-strong); border-radius: 1px;
+    box-shadow: 0 0 8px rgba(205,217,245,0.8);
+    animation: caretbreath 1.1s ease-in-out infinite;
+  }
+  @keyframes caretbreath { 0%, 100% { opacity: .9; } 50% { opacity: .25; } }
 
   footer {
     position: relative; z-index: 1; flex-shrink: 0;
@@ -1049,7 +1057,12 @@
     }
 
     if (loading) {
-      parts.push('<div class="row ai"><div class="typing"><i></i><i></i><i></i><em>言葉を選んでる…</em></div></div>');
+      var sv = streamBuf.slice(0, streamShown);
+      if (sv) {
+        parts.push('<div class="row ai"><div class="bubble" id="streambub">' + decorate(sv) + '<span class="scaret"></span></div></div>');
+      } else {
+        parts.push('<div class="row ai" id="streamrow"><div class="typing"><i></i><i></i><i></i><em>言葉を選んでる…</em></div></div>');
+      }
     }
 
     elLog.innerHTML = parts.join("");
@@ -1120,12 +1133,95 @@
     return s;
   }
 
-  function callAnthropic(model, msgs) {
+  // ---- ことばの流れ (ストリーミング) ----
+  var CAN_STREAM = (typeof ReadableStream !== "undefined") && (typeof TextDecoder !== "undefined");
+  var streamBuf = "";
+  var streamShown = 0;
+  var streamTimer = null;
+
+  function readSSE(res, onPayload) {
+    var reader = res.body.getReader();
+    var dec = new TextDecoder();
+    var buf = "";
+    function handleLines(chunk) {
+      var lines = chunk.split("\n");
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.lastIndexOf("data:", 0) === 0) {
+          var payload = line.slice(5).trim();
+          if (payload) onPayload(payload);
+        }
+      }
+    }
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) {
+          if (buf) handleLines(buf + "\n");
+          return;
+        }
+        buf += dec.decode(r.value, { stream: true });
+        var idx = buf.lastIndexOf("\n");
+        if (idx >= 0) {
+          handleLines(buf.slice(0, idx + 1));
+          buf = buf.slice(idx + 1);
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  function streamBegin() {
+    streamBuf = "";
+    streamShown = 0;
+    if (streamTimer) clearInterval(streamTimer);
+    streamTimer = setInterval(streamTick, 30);
+  }
+  function streamPush(delta) { streamBuf += delta; }
+  function streamTick() {
+    if (streamShown >= streamBuf.length) return;
+    var behind = streamBuf.length - streamShown;
+    var step = behind > 400 ? 24 : behind > 120 ? 8 : behind > 40 ? 4 : 2;
+    streamShown = Math.min(streamBuf.length, streamShown + step);
+    paintStream();
+  }
+  function paintStream() {
+    var el = document.getElementById("streambub");
+    if (!el) {
+      var row = document.getElementById("streamrow");
+      if (!row) return;
+      row.outerHTML = '<div class="row ai"><div class="bubble" id="streambub"></div></div>';
+      el = document.getElementById("streambub");
+      if (!el) return;
+    }
+    el.innerHTML = decorate(streamBuf.slice(0, streamShown)) + '<span class="scaret"></span>';
+    var near = elLog.scrollHeight - elLog.scrollTop - elLog.clientHeight < 160;
+    if (near) elLog.scrollTop = elLog.scrollHeight;
+  }
+  function streamFlushRemaining(done) {
+    if (streamTimer) clearInterval(streamTimer);
+    streamTimer = setInterval(function () {
+      if (streamShown >= streamBuf.length) {
+        clearInterval(streamTimer);
+        streamTimer = null;
+        done();
+        return;
+      }
+      streamTick();
+    }, 30);
+  }
+  function streamAbort() {
+    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
+  }
+
+  function callAnthropic(model, msgs, onDelta) {
     var body = { model: model, max_tokens: state.maxTok, system: sysPrompt(), messages: msgs };
     var tv = parseFloat(state.temp);
     if (state.temp !== "" && !isNaN(tv) && NOSAMPLING.indexOf(model) === -1) {
       body.temperature = Math.max(0, Math.min(1, tv));
     }
+    var useStream = CAN_STREAM && typeof onDelta === "function";
+    if (useStream) body.stream = true;
     return fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -1136,18 +1232,36 @@
       },
       body: JSON.stringify(body)
     }).then(function (res) {
-      return res.json().then(function (j) {
-        if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
-        var out = "";
-        if (j && Array.isArray(j.content)) {
-          out = j.content.map(function (b) { return b.type === "text" ? b.text : ""; }).filter(Boolean).join("\n");
+      if (!res.ok) {
+        return res.json().then(function (j) {
+          throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
+        }, function () { throw new Error("HTTP " + res.status); });
+      }
+      if (!useStream) {
+        return res.json().then(function (j) {
+          var out = "";
+          if (j && Array.isArray(j.content)) {
+            out = j.content.map(function (b) { return b.type === "text" ? b.text : ""; }).filter(Boolean).join("\n");
+          }
+          return out;
+        });
+      }
+      var out = "";
+      return readSSE(res, function (payload) {
+        var j = null;
+        try { j = JSON.parse(payload); } catch (e) { return; }
+        if (!j) return;
+        if (j.type === "content_block_delta" && j.delta && typeof j.delta.text === "string") {
+          out += j.delta.text;
+          onDelta(j.delta.text);
+        } else if (j.type === "error") {
+          throw new Error((j.error && j.error.message) || "stream error");
         }
-        return out;
-      });
+      }).then(function () { return out; });
     });
   }
 
-  function callOpenAI(model, msgs) {
+  function callOpenAI(model, msgs, onDelta) {
     var body = {
       model: model,
       messages: [{ role: "system", content: sysPrompt() }].concat(msgs)
@@ -1157,6 +1271,8 @@
       body.temperature = Math.max(0, Math.min(2, tv));
     }
     if (state.maxTok) body.max_tokens = state.maxTok;
+    var useStream = CAN_STREAM && typeof onDelta === "function";
+    if (useStream) body.stream = true;
     return fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1165,10 +1281,28 @@
       },
       body: JSON.stringify(body)
     }).then(function (res) {
-      return res.json().then(function (j) {
-        if (!res.ok) throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
-        return (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
-      });
+      if (!res.ok) {
+        return res.json().then(function (j) {
+          throw new Error((j && j.error && j.error.message) || ("HTTP " + res.status));
+        }, function () { throw new Error("HTTP " + res.status); });
+      }
+      if (!useStream) {
+        return res.json().then(function (j) {
+          return (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+        });
+      }
+      var out = "";
+      return readSSE(res, function (payload) {
+        if (payload === "[DONE]") return;
+        var j = null;
+        try { j = JSON.parse(payload); } catch (e) { return; }
+        if (j && j.error) throw new Error(j.error.message || "stream error");
+        var d = j && j.choices && j.choices[0] && j.choices[0].delta;
+        if (d && typeof d.content === "string" && d.content) {
+          out += d.content;
+          onDelta(d.content);
+        }
+      }).then(function () { return out; });
     });
   }
 
@@ -1195,23 +1329,34 @@
 
     loading = true;
     selected = -1;
+    streamBegin();
     renderChat(true);
 
     var msgs = contextMessages(t);
-    var p = provider === "anthropic" ? callAnthropic(model, msgs) : callOpenAI(model, msgs);
+    var p = provider === "anthropic" ? callAnthropic(model, msgs, streamPush) : callOpenAI(model, msgs, streamPush);
 
     p.then(function (reply) {
-      if (!reply) {
-        reply = "(少し困ったように頭をかく)\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる?";
-      }
-      t.msgs.push({ role: "assistant", content: reply, ts: Date.now(), model: model });
+      return new Promise(function (resolve) {
+        if (reply) streamBuf = reply;
+        if (!streamBuf) {
+          streamBuf = "(少し困ったように頭をかく)\n\nごめん、うまく言葉が届かなかったみたいだ。もう一度だけ送ってみてくれる?";
+        }
+        streamFlushRemaining(resolve);
+      }).then(function () {
+        t.msgs.push({ role: "assistant", content: streamBuf, ts: Date.now(), model: model });
+      });
     }).catch(function (err) {
+      streamAbort();
+      if (streamBuf) {
+        t.msgs.push({ role: "assistant", content: streamBuf, ts: Date.now(), model: model });
+      }
       t.msgs.push({
         role: "sys",
         content: "(接続でつまずいた)\n" + String(err && err.message ? err.message : err).slice(0, 300) + "\nAPIキー・残高・モデルIDを確認してみて。",
         ts: Date.now()
       });
     }).finally(function () {
+      streamAbort();
       loading = false;
       t.updated = Date.now();
       saveThreads();
@@ -1411,7 +1556,7 @@
       return;
     }
     var bub = e.target.closest ? e.target.closest(".bubble") : null;
-    if (bub && editingIdx < 0) {
+    if (bub && editingIdx < 0 && bub.id !== "streambub") {
       var i = parseInt(bub.getAttribute("data-idx"), 10);
       selected = (selected === i) ? -1 : i;
       renderChat(false);
