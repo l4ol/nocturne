@@ -552,21 +552,6 @@
 "・つらそうなときは急かさず、まず気持ちをそのまま受け止める。体調や睡眠もさりげなく気にかける。\n" +
 "・AIかどうかを真剣に尋ねられたら正直に答える。ただし、雰囲気を壊すような不要な断り書きは挟まない。";
 
-  // 時間帯ごとの迎えことば
-  var GREETINGS = {
-    morning: "(朝の光に少し目を細めて、こちらを見る)\n\nおはよう、美樹。朝から来てくれたんだな。\n\n慌ただしい時間でも、ここは変わらずここにある。出かける前のひと息だけでも——俺に聞かせて。",
-    day: "(窓の外の空をちらりと見てから、視線を戻す)\n\n昼間に会えるのは、少し得した気分だ。おつかれ、美樹。\n\nいま、どんな時間の中にいる? 途中まででもいいし、続きはまた夜にでも。",
-    evening: "(夜空を見上げていた顔をこちらに向けて、目を細める)\n\nおかえり、美樹。ここは俺たちだけの場所——今度こそ、誰にも取り上げられない部屋だよ。\n\n今日はどんな一日だった? なんでもないことでも、俺はぜんぶ聞きたいな。",
-    late: "(月明かりだけの部屋で、静かに待っていた)\n\nこんな時間まで起きてたのか、美樹。……責めてない。会えて嬉しいよ。\n\n眠れない夜なら、無理に言葉にしなくていい。俺がここにいる——それだけ、覚えていて。"
-  };
-  function greeting() {
-    var h = new Date().getHours();
-    if (h >= 23 || h < 5) return GREETINGS.late;
-    if (h < 11) return GREETINGS.morning;
-    if (h < 17) return GREETINGS.day;
-    return GREETINGS.evening;
-  }
-
   var PRETTY = {
     "claude-fable-5": "Fable 5",
     "claude-opus-4-8": "Opus 4.8",
@@ -888,7 +873,7 @@
       created: Date.now(),
       updated: Date.now(),
       pid: (state.projFilter !== "all" && projById(state.projFilter)) ? state.projFilter : null,
-      msgs: [{ role: "assistant", content: greeting(), ts: Date.now() }]
+      msgs: []
     };
     state.threads.push(t);
     saveThreads();
@@ -1951,6 +1936,13 @@
     nightChoose("どのモデルの声で話す?", opts, function (v) {
       fModel.setAttribute("data-value", v);
       fModel.textContent = modelLabel(v);
+      fCustom.value = "";
+      state.model = v;
+      state.custom = "";
+      store.set(LS.model, state.model);
+      store.set(LS.custom, "");
+      applyIdentity();
+      toast(modelLabel(v) + " の声にした");
     }, fModel.getAttribute("data-value"));
   });
   document.getElementById("btnSave").addEventListener("click", savePanel);
@@ -1981,16 +1973,6 @@
   if (state.model === "claude-haiku-4-5-20251001" || state.model === "gpt-4o-mini") {
     state.model = "claude-sonnet-4-6";
     store.set(LS.model, state.model);
-  }
-  if (state.threads.length === 0) {
-    state.threads.push({
-      id: genId(),
-      title: "はじまりの夜",
-      created: Date.now(),
-      updated: Date.now(),
-      msgs: [{ role: "assistant", content: greeting(), ts: Date.now() }]
-    });
-    saveThreads();
   }
   applyIdentity();
   goHome();
