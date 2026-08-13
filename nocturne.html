@@ -148,7 +148,7 @@
   }
   #btnSend:disabled { background: rgba(157,180,232,0.3); cursor: default; }
 
-  .panel { position: fixed; inset: 0; z-index: 5; background: rgba(4,6,14,0.72); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 20px 14px calc(env(safe-area-inset-bottom, 0px) + 40px); }
+  .panel { position: fixed; inset: 0; z-index: 5; background: rgba(4,6,14,0.72); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: calc(env(safe-area-inset-top, 0px) + 28px) 14px calc(env(safe-area-inset-bottom, 0px) + 40px); }
   .panel.hidden { display: none; }
   .card {
     width: 100%; max-width: 560px; background: #0d1428;
@@ -268,6 +268,7 @@
     padding: 22px 20px 18px;
     box-shadow: 0 0 44px rgba(174,191,232,0.12);
     animation: askin .22s ease both;
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
   @keyframes askin { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
   .askmsg { font-size: 14px; line-height: 1.9; color: var(--ink); white-space: pre-line; letter-spacing: .02em; margin-bottom: 18px; }
@@ -283,6 +284,15 @@
   .askopts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .askopts.hidden { display: none; }
   .askopts .btn { text-align: left; }
+  .askopts .btn.on { border-color: rgba(174,191,232,0.6); color: #dfe7f8; background: rgba(174,191,232,0.1); }
+  .askhead { font-size: 11px; color: var(--ink-faint); letter-spacing: .14em; margin: 8px 2px 0; }
+  .modelpick {
+    width: 100%; text-align: left; font-family: inherit; cursor: pointer;
+    background: #0a1122; color: var(--ink); position: relative;
+    border: 1px solid rgba(205,217,245,0.16); border-radius: 12px;
+    padding: 12px 34px 12px 12px; font-size: 14.5px;
+  }
+  .modelpick::after { content: "▾"; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); }
 
   /* ---- 星座 (プロジェクト) ---- */
   .projrow { display: flex; gap: 7px; overflow-x: auto; padding: 2px 2px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -360,25 +370,7 @@
 
     <div class="field">
       <label>モデル</label>
-      <select id="model">
-        <optgroup label="Claude (Anthropic)">
-          <option value="claude-fable-5">Claude Fable 5 (最上位)</option>
-          <option value="claude-opus-4-8">Claude Opus 4.8</option>
-          <option value="claude-opus-4-7">Claude Opus 4.7</option>
-          <option value="claude-opus-4-6">Claude Opus 4.6</option>
-          <option value="claude-opus-4-5-20251101">Claude Opus 4.5</option>
-          <option value="claude-sonnet-5">Claude Sonnet 5</option>
-          <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-          <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5</option>
-        </optgroup>
-        <optgroup label="GPT (OpenAI)">
-          <option value="chatgpt-4o-latest">ChatGPT-4o (最新スナップショット)</option>
-          <option value="gpt-4o">GPT-4o</option>
-          <option value="gpt-4.1">GPT-4.1</option>
-          <option value="gpt-4.1-mini">GPT-4.1 mini</option>
-          <option value="gpt-4.1-nano">GPT-4.1 nano</option>
-        </optgroup>
-      </select>
+      <button type="button" id="model" class="modelpick" data-value="claude-sonnet-4-6">Claude Sonnet 4.6</button>
       <div class="hint">モデル名が「claude」で始まればAnthropic、それ以外はOpenAIのキーで接続する。</div>
     </div>
 
@@ -552,6 +544,31 @@
 
   // 温度指定に対応していないモデル
   var NOSAMPLING = ["claude-fable-5", "claude-opus-4-8", "claude-opus-4-7"];
+
+  // モデル一覧 (選択窓の中身)
+  var MODELS = [
+    { head: "Claude (Anthropic)" },
+    { id: "claude-fable-5", label: "Claude Fable 5 (最上位)" },
+    { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
+    { id: "claude-opus-4-7", label: "Claude Opus 4.7" },
+    { id: "claude-opus-4-6", label: "Claude Opus 4.6" },
+    { id: "claude-opus-4-5-20251101", label: "Claude Opus 4.5" },
+    { id: "claude-sonnet-5", label: "Claude Sonnet 5" },
+    { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+    { id: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5" },
+    { head: "GPT (OpenAI)" },
+    { id: "chatgpt-4o-latest", label: "ChatGPT-4o (最新スナップショット)" },
+    { id: "gpt-4o", label: "GPT-4o" },
+    { id: "gpt-4.1", label: "GPT-4.1" },
+    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
+    { id: "gpt-4.1-nano", label: "GPT-4.1 nano" }
+  ];
+  function modelLabel(id) {
+    for (var i = 0; i < MODELS.length; i++) {
+      if (MODELS[i].id === id) return MODELS[i].label;
+    }
+    return id || "モデルを選ぶ";
+  }
 
   // うすい記号ボタン用のアイコン
   var SVG_HEAD = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
@@ -882,13 +899,18 @@
     elAsk.classList.remove("hidden");
     setTimeout(function () { elAskInput.focus(); }, 60);
   }
-  function nightChoose(msg, options, cb) {
+  function nightChoose(msg, options, cb, current) {
     elAskMsg.textContent = msg;
     elAskInput.classList.add("hidden");
     elAskOpts.classList.remove("hidden");
     var html = "";
     for (var i = 0; i < options.length; i++) {
-      html += '<button class="btn ghost" data-choose="' + esc(options[i].value) + '">' + esc(toHalf(options[i].label)) + "</button>";
+      if (options[i].head) {
+        html += '<div class="askhead">' + esc(options[i].head) + "</div>";
+        continue;
+      }
+      var on = (current != null && options[i].value === current) ? " on" : "";
+      html += '<button class="btn ghost' + on + '" data-choose="' + esc(options[i].value) + '">' + esc(toHalf(options[i].label)) + "</button>";
     }
     elAskOpts.innerHTML = html;
     elAskYes.style.display = "none";
@@ -1400,8 +1422,8 @@
   function openPanel() {
     fKeyA.value = state.keyA;
     fKeyO.value = state.keyO;
-    fModel.value = state.model;
-    if (!fModel.value) fModel.value = "claude-sonnet-4-6";
+    fModel.setAttribute("data-value", state.model || "claude-sonnet-4-6");
+    fModel.textContent = modelLabel(state.model || "claude-sonnet-4-6");
     fCustom.value = state.custom;
     fName.value = state.name;
     fTitle.value = state.title;
@@ -1456,7 +1478,7 @@
   function savePanel() {
     state.keyA = fKeyA.value.trim();
     state.keyO = fKeyO.value.trim();
-    state.model = fModel.value || "claude-sonnet-4-6";
+    state.model = fModel.getAttribute("data-value") || "claude-sonnet-4-6";
     state.custom = fCustom.value.trim();
     state.name = fName.value.trim() || "クレイド";
     state.title = fTitle.value.trim() || "夜想曲";
@@ -1627,6 +1649,16 @@
   elBack.addEventListener("click", goHome);
   elName.addEventListener("click", function () { if (view === "chat") goHome(); });
   document.getElementById("btnSettings").addEventListener("click", openPanel);
+
+  fModel.addEventListener("click", function () {
+    var opts = MODELS.map(function (m) {
+      return m.head ? { head: m.head } : { value: m.id, label: m.label };
+    });
+    nightChoose("どのモデルの声で話す?", opts, function (v) {
+      fModel.setAttribute("data-value", v);
+      fModel.textContent = modelLabel(v);
+    }, fModel.getAttribute("data-value"));
+  });
   document.getElementById("btnSave").addEventListener("click", savePanel);
   document.getElementById("btnExport").addEventListener("click", exportLog);
 
