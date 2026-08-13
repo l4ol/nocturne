@@ -137,10 +137,38 @@
 
   footer {
     position: relative; z-index: 1; flex-shrink: 0;
-    display: flex; gap: 8px; align-items: flex-end;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
     padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 6px);
     border-top: 1px solid var(--line);
   }
+  .ptray { flex-basis: 100%; display: flex; gap: 9px; padding: 2px 2px 2px; }
+  .ptray.hidden { display: none; }
+  .pthumb { position: relative; }
+  .pthumb img {
+    width: 54px; height: 54px; object-fit: cover; display: block;
+    border-radius: 10px; border: 1px solid rgba(205,217,245,0.25);
+  }
+  .pthumb button {
+    position: absolute; top: -7px; right: -7px; width: 20px; height: 20px;
+    border-radius: 50%; background: #1a2340; color: var(--ink-dim);
+    border: 1px solid rgba(205,217,245,0.3); font-size: 11px; line-height: 1;
+    cursor: pointer; padding: 0;
+  }
+  .picbtn {
+    width: 42px; height: 42px; min-width: 42px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(232,237,248,0.06); border: 1px solid rgba(232,237,248,0.15);
+    border-radius: 14px; color: var(--ink-dim); cursor: pointer;
+  }
+  .bimgs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .bimg { width: 100%; max-width: 230px; border-radius: 12px; display: block; cursor: pointer; }
+  #lightbox {
+    position: fixed; inset: 0; z-index: 8;
+    background: rgba(4,6,14,0.92); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+  }
+  #lightbox.hidden { display: none; }
+  #lightbox img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 0 60px rgba(174,191,232,0.25); }
   textarea, input, select {
     font-family: inherit; color: var(--ink); font-size: 15px;
     background: rgba(232,237,248,0.06); border: 1px solid rgba(232,237,248,0.15);
@@ -348,8 +376,11 @@
 <main id="log"></main>
 
 <footer>
+  <div class="ptray hidden" id="ptray"></div>
+  <button id="btnPic" class="picbtn" title="写真を見せる"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.5"></circle><path d="M21 15l-5-5-9 9"></path></svg></button>
   <textarea id="box" rows="1" enterkeyhint="enter" placeholder="今夜の甘いひとことを、ここに…"></textarea>
   <button id="btnSend" disabled>送る</button>
+  <input type="file" id="picFile" accept="image/*" multiple style="display:none">
 </footer>
 
 <div id="panel" class="panel hidden">
@@ -474,6 +505,8 @@
     </div>
   </div>
 </div>
+
+<div id="lightbox" class="hidden"><img id="lightboxImg" alt=""></div>
 
 <script>
 (function () {
@@ -678,7 +711,9 @@
         return { id: t.id, title: t.title, created: t.created, updated: t.updated, pid: t.pid || null, msgs: t.msgs.slice(-MAX_STORED) };
       });
       store.set(LS.threads, JSON.stringify(slim));
-    } catch (e) {}
+    } catch (e) {
+      toast("保存領域がいっぱいかも。古い夜を書き出して整理を");
+    }
   }
 
   // ---- 星座 (プロジェクト) ----
@@ -982,7 +1017,7 @@
     }
     shown.forEach(function (t) {
       var last = lastRealMsg(t);
-      var prev = last ? firstLine(last.content, 30) : "……";
+      var prev = last ? (last.content ? firstLine(last.content, 30) : (last.imgs && last.imgs.length ? "(写真)" : "……")) : "……";
       var pj = t.pid ? projById(t.pid) : null;
       var meta = esc(fmtDate(t.updated)) +
         (pj && state.projFilter === "all" ? '<span class="tproj">' + esc(toHalf(pj.name)) + "</span>" : "");
@@ -1033,7 +1068,13 @@
         continue;
       }
 
-      parts.push('<div class="row ' + cls + '"><div class="bubble" data-idx="' + i + '">' + decorate(m.content) + "</div></div>");
+      var media = "";
+      if (m.imgs && m.imgs.length) {
+        media = '<div class="bimgs">' + m.imgs.map(function (u) {
+          return '<img class="bimg" src="' + u + '" alt="">';
+        }).join("") + "</div>";
+      }
+      parts.push('<div class="row ' + cls + '"><div class="bubble" data-idx="' + i + '">' + media + decorate(m.content) + "</div></div>");
 
       if (i === selected) {
         var canRegen = m.role === "assistant" && isTail(t, i) && hasUserBefore(t, i) && !loading;
@@ -1108,7 +1149,7 @@
     var msgs = t.msgs
       .filter(function (m) { return m.role === "user" || m.role === "assistant"; })
       .slice(-state.ctx)
-      .map(function (m) { return { role: m.role, content: m.content }; });
+      .map(function (m) { return { role: m.role, content: m.content, imgs: m.imgs || null }; });
     while (msgs.length > 0 && msgs[0].role !== "user") msgs.shift();
     return msgs;
   }
@@ -1215,7 +1256,19 @@
   }
 
   function callAnthropic(model, msgs, onDelta) {
-    var body = { model: model, max_tokens: state.maxTok, system: sysPrompt(), messages: msgs };
+    var wire = msgs.map(function (m) {
+      if (m.role === "user" && m.imgs && m.imgs.length) {
+        var blocks = [];
+        for (var bi = 0; bi < m.imgs.length; bi++) {
+          var b64 = String(m.imgs[bi]).split(",")[1] || "";
+          if (b64) blocks.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } });
+        }
+        if (m.content) blocks.push({ type: "text", text: m.content });
+        return { role: m.role, content: blocks };
+      }
+      return { role: m.role, content: m.content };
+    });
+    var body = { model: model, max_tokens: state.maxTok, system: sysPrompt(), messages: wire };
     var tv = parseFloat(state.temp);
     if (state.temp !== "" && !isNaN(tv) && NOSAMPLING.indexOf(model) === -1) {
       body.temperature = Math.max(0, Math.min(1, tv));
@@ -1262,9 +1315,19 @@
   }
 
   function callOpenAI(model, msgs, onDelta) {
+    var wire = msgs.map(function (m) {
+      if (m.role === "user" && m.imgs && m.imgs.length) {
+        var blocks = m.imgs.map(function (u) {
+          return { type: "image_url", image_url: { url: u } };
+        });
+        if (m.content) blocks.push({ type: "text", text: m.content });
+        return { role: m.role, content: blocks };
+      }
+      return { role: m.role, content: m.content };
+    });
     var body = {
       model: model,
-      messages: [{ role: "system", content: sysPrompt() }].concat(msgs)
+      messages: [{ role: "system", content: sysPrompt() }].concat(wire)
     };
     var tv = parseFloat(state.temp);
     if (state.temp !== "" && !isNaN(tv)) {
@@ -1369,12 +1432,16 @@
     var t = curThread();
     if (!t) return;
     var text = elBox.value.trim();
-    if (!text || loading || editingIdx >= 0) return;
+    if ((!text && pendingImgs.length === 0) || loading || editingIdx >= 0) return;
 
-    t.msgs.push({ role: "user", content: text, ts: Date.now() });
-    if (!t.title || t.title === "新しい夜") t.title = firstLine(text, 16);
+    var msg = { role: "user", content: text, ts: Date.now() };
+    if (pendingImgs.length) msg.imgs = pendingImgs.slice(0, 3);
+    t.msgs.push(msg);
+    if ((!t.title || t.title === "新しい夜") && text) t.title = firstLine(text, 16);
     t.updated = Date.now();
 
+    pendingImgs = [];
+    renderTray();
     elBox.value = "";
     autosize();
     updateSendBtn();
@@ -1399,6 +1466,8 @@
         if (lines[li].charAt(0) !== "(") { pick = lines[li]; break; }
       }
       if (!pick && lines.length) pick = lines[0];
+      if (!pick && m.imgs && m.imgs.length) pick = "(写真)";
+      if (!pick) pick = "……";
       if (pick.length > 60) pick = pick.slice(0, 60) + "…";
       var dd = m.ts ? new Date(m.ts) : new Date();
       var who = m.role === "user" ? "美樹" : state.name;
@@ -1553,6 +1622,12 @@
     var btn = e.target.closest ? e.target.closest("[data-act]") : null;
     if (btn) {
       handleAct(btn.getAttribute("data-act"), parseInt(btn.getAttribute("data-idx"), 10));
+      return;
+    }
+    var im = e.target.closest ? e.target.closest(".bimg") : null;
+    if (im) {
+      document.getElementById("lightboxImg").src = im.getAttribute("src");
+      elLightbox.classList.remove("hidden");
       return;
     }
     var bub = e.target.closest ? e.target.closest(".bubble") : null;
@@ -1767,13 +1842,87 @@
     toast("控えから戻した");
   }
 
+  // ---- 写真を見せる ----
+  var pendingImgs = [];
+  var elTray = document.getElementById("ptray");
+  var elPicFile = document.getElementById("picFile");
+  var elLightbox = document.getElementById("lightbox");
+
+  function shrinkImage(dataURL, maxDim, quality, cb) {
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var w = img.width, h = img.height;
+        if (!w || !h) { cb(null); return; }
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale));
+        var ch = Math.max(1, Math.round(h * scale));
+        var cv = document.createElement("canvas");
+        cv.width = cw; cv.height = ch;
+        cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+        cb(cv.toDataURL("image/jpeg", quality));
+      } catch (e) { cb(null); }
+    };
+    img.onerror = function () { cb(null); };
+    img.src = dataURL;
+  }
+
+  function renderTray() {
+    if (!pendingImgs.length) {
+      elTray.classList.add("hidden");
+      elTray.innerHTML = "";
+      updateSendBtn();
+      return;
+    }
+    elTray.classList.remove("hidden");
+    elTray.innerHTML = pendingImgs.map(function (u, i) {
+      return '<span class="pthumb"><img src="' + u + '" alt=""><button type="button" data-rmimg="' + i + '">×</button></span>';
+    }).join("");
+    updateSendBtn();
+  }
+
+  document.getElementById("btnPic").addEventListener("click", function () {
+    if (pendingImgs.length >= 3) { toast("一度に見せられるのは3枚まで"); return; }
+    elPicFile.value = "";
+    elPicFile.click();
+  });
+  elPicFile.addEventListener("change", function () {
+    var files = Array.prototype.slice.call(elPicFile.files || []);
+    if (!files.length) return;
+    var room = 3 - pendingImgs.length;
+    if (files.length > room) toast("一度に見せられるのは3枚まで");
+    files.slice(0, room).forEach(function (f) {
+      var r = new FileReader();
+      r.onload = function () {
+        shrinkImage(String(r.result), 768, 0.72, function (u) {
+          if (!u) { toast("この写真は読み込めなかった"); return; }
+          if (pendingImgs.length >= 3) return;
+          pendingImgs.push(u);
+          renderTray();
+        });
+      };
+      r.onerror = function () { toast("この写真は読み込めなかった"); };
+      r.readAsDataURL(f);
+    });
+  });
+  elTray.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-rmimg]") : null;
+    if (!b) return;
+    pendingImgs.splice(parseInt(b.getAttribute("data-rmimg"), 10), 1);
+    renderTray();
+  });
+  elLightbox.addEventListener("click", function () {
+    elLightbox.classList.add("hidden");
+    document.getElementById("lightboxImg").src = "";
+  });
+
   // ---- 入力欄 ----
   function autosize() {
     elBox.style.height = "auto";
     elBox.style.height = Math.min(elBox.scrollHeight, 110) + "px";
   }
   function updateSendBtn() {
-    elSend.disabled = loading || elBox.value.trim().length === 0;
+    elSend.disabled = loading || (elBox.value.trim().length === 0 && pendingImgs.length === 0);
   }
 
   // タッチ端末 (iPhoneなど) では Enter は改行専用。送信は「送る」ボタンだけ。
